@@ -1,0 +1,38 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: dongchedi
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      indent-output: false
+  web:
+    resources:
+      static-locations: classpath:/static/
+      cache:
+        period: 0
+  mvc:
+    problemdetails:
+      enabled: false
+
+# 业务配置：数据集路径与推荐算法默认参数
+dongchedi:
+  dataset:
+    location: classpath:data/cars.json
+  recommend:
+    default-limit: 5
+    max-limit: 20
+
+logging:
+  level:
+    root: INFO
+    com.dongchedi.car: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
