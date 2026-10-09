@@ -608,16 +608,19 @@
         var ids = state.compare.map(function (car) {
             return car.id;
         }).join(',');
+        dom.compareContent.innerHTML = '<p class="placeholder">正在加载对比数据…</p>';
+        dom.compareModal.hidden = false;
         fetchJson('/api/cars/compare?ids=' + encodeURIComponent(ids)).then(function (cars) {
             dom.compareContent.innerHTML = renderCompareTable(cars);
-            dom.compareModal.hidden = false;
         }).catch(function (error) {
-            toast(error.message);
+            dom.compareContent.innerHTML = '<p class="placeholder">对比数据加载失败：'
+                + escapeHtml(error.message) + '</p>';
         });
     }
 
     function closeCompare() {
         dom.compareModal.hidden = true;
+        dom.compareContent.innerHTML = '';
     }
 
     function renderCompareTable(cars) {

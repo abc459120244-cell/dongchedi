@@ -168,6 +168,15 @@ dongchedi
 powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 ```
 
+### 7.5 联调阶段发现并修复的真实缺陷
+
+除了作业要求「故意引入」的错误提交，前后端联调过程中还修掉了两个真实缺陷，均通过 `fix:` 提交留痕：
+
+| 缺陷 | 现象 | 原因 | 修复 |
+| --- | --- | --- | --- |
+| 缺失静态资源被包装成 500 | 访问不存在的静态文件返回 500 而不是 404 | 兜底 `@ExceptionHandler(Exception.class)` 拦截了 Spring 的 `NoResourceFoundException` | 单独处理 `NoResourceFoundException`，返回 404 并补充测试 |
+| 空白弹窗常驻遮挡页面 | 页面一加载就出现空白的「车型对比」弹窗和底部空浮条，挡住中间车型卡片 | 作者样式 `.modal { display: grid }`、`.compare-bar { display: flex }` 与浏览器默认的 `[hidden] { display: none }` 优先级相同但更靠后，把隐藏效果覆盖了 | 显式声明 `[hidden] { display: none !important; }`；同时给对比弹窗加「加载中 / 加载失败」提示，关闭时清空内容 |
+
 ## 八、验收标准对照
 
 | 验收标准 | 完成情况 | 对应证据 |

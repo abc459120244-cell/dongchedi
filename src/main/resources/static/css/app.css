@@ -22,6 +22,15 @@
     box-sizing: border-box;
 }
 
+/*
+ * 注意：作者样式里的 display 声明与浏览器默认的 [hidden] { display: none } 优先级相同，
+ * 但作者样式更靠后，会把它覆盖掉，导致弹窗、浮层在页面初始加载时就出现。
+ * 这里显式声明，保证 hidden 属性始终生效。
+ */
+[hidden] {
+    display: none !important;
+}
+
 html {
     scroll-behavior: smooth;
 }
