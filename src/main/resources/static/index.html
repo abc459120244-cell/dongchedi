@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>车帝选车 · 汽车筛选与推荐系统</title>
+    <meta name="description" content="基于 Spring Boot 的汽车筛选与推荐系统，支持多条件筛选、智能推荐与市场榜单。">
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar__inner">
+        <a class="brand" href="#top">
+            <span class="brand__logo">车</span>
+            <span class="brand__text">
+                <strong>车帝选车</strong>
+                <small>汽车筛选与推荐系统</small>
+            </span>
+        </a>
+        <nav class="nav">
+            <a href="#recommend">智能选车</a>
+            <a href="#cars">条件筛选</a>
+            <a href="#ranking">数据榜单</a>
+        </nav>
+        <div class="search">
+            <input id="keywordInput" type="search" placeholder="搜索车型、品牌，例如：比亚迪 / 插混 / 7 座" autocomplete="off">
+            <button id="searchBtn" type="button">搜索</button>
+        </div>
+    </div>
+</header>
+
+<main id="top">
+    <section class="hero">
+        <div class="hero__inner">
+            <div class="hero__text">
+                <p class="hero__tag">Spring Boot · 汽车筛选与推荐</p>
+                <h1>像逛懂车帝一样，快速选定你的下一台车</h1>
+                <p class="hero__desc">
+                    覆盖 <span id="heroCarCount">--</span> 款在售车型、<span id="heroBrandCount">--</span> 个品牌。
+                    支持按价格、级别、能源类型、用车场景等 10+ 维度筛选，并提供可解释的加权推荐结果。
+                </p>
+                <div class="hero__actions">
+                    <a class="btn btn--primary" href="#recommend">立即智能选车</a>
+                    <a class="btn btn--ghost" href="#cars">浏览全部车型</a>
+                </div>
+            </div>
+            <div class="hero__stats" id="heroStats"></div>
+        </div>
+    </section>
+
+    <section class="section" id="recommend">
+        <div class="section__head">
+            <h2>智能选车推荐</h2>
+            <p>填写预算与用车需求，系统会按「内容特征 + 市场热度 + 用户口碑」加权打分并给出推荐理由。</p>
+        </div>
+        <div class="panel panel--recommend">
+            <form class="recommend-form" id="recommendForm">
+                <div class="form-row">
+                    <label class="form-label">购车预算（万元）</label>
+                    <div class="budget-inputs">
+                        <input id="recMinPrice" type="number" min="0" step="0.5" value="12">
+                        <span class="dash">—</span>
+                        <input id="recMaxPrice" type="number" min="0" step="0.5" value="20">
+                        <div class="budget-presets" id="budgetPresets"></div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label class="form-label">用车场景<small>（可多选）</small></label>
+                    <div class="chip-group" id="sceneChips"></div>
+                </div>
+                <div class="form-row form-row--split">
+                    <div class="form-field">
+                        <label class="form-label">能源偏好</label>
+                        <select id="energyPreference"></select>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">选车优先级</label>
+                        <select id="prioritySelect"></select>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">座位数需求</label>
+                        <select id="minSeatsSelect"></select>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">返回数量</label>
+                        <select id="limitSelect"></select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn--primary" type="submit" id="recommendBtn">开始推荐</button>
+                    <button class="btn btn--ghost" type="button" id="resetRecommendBtn">重置条件</button>
+                </div>
+            </form>
+            <div class="recommend-result" id="recommendResult">
+                <p class="placeholder">还没有推荐结果，点击「开始推荐」试试。</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="cars">
+        <div class="section__head">
+            <h2>条件筛选选车</h2>
+            <p>同一维度可多选（或的关系），不同维度之间是且的关系；筛选、排序、分页都在服务端完成。</p>
+        </div>
+        <div class="layout">
+            <aside class="filters" id="filterPanel"></aside>
+            <div class="list">
+                <div class="toolbar">
+                    <div class="toolbar__left">
+                        <span class="result-count" id="resultCount">正在加载…</span>
+                        <label class="switch">
+                            <input type="checkbox" id="favoriteOnly">
+                            <span>只看收藏（<em id="favoriteCount">0</em>）</span>
+                        </label>
+                    </div>
+                    <div class="toolbar__right">
+                        <label for="sortSelect">排序</label>
+                        <select id="sortSelect"></select>
+                    </div>
+                </div>
+                <div class="car-grid" id="carGrid"></div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="ranking">
+        <div class="section__head">
+            <h2>市场数据榜单</h2>
+            <p>数据来自服务端实时聚合接口 <code>/api/statistics/*</code>。</p>
+        </div>
+        <div class="ranking-layout">
+            <div class="panel">
+                <h3 class="panel__title">品牌销量榜 TOP 10</h3>
+                <table class="table" id="brandTable">
+                    <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>品牌</th>
+                        <th>在售车型</th>
+                        <th>月销量</th>
+                        <th>口碑</th>
+                        <th>畅销车型</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="panel">
+                <h3 class="panel__title">能源类型分布</h3>
+                <div class="bar-list" id="energyDistribution"></div>
+                <h3 class="panel__title">价格区间分布</h3>
+                <div class="bar-list" id="priceDistribution"></div>
+                <h3 class="panel__title">用车场景分布</h3>
+                <div class="bar-list" id="sceneDistribution"></div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="footer">
+    <p>车帝选车 · 基于 Spring Boot 3.5 + Java 21 的汽车筛选与推荐系统示例项目</p>
+    <p class="footer__sub">接口：/api/cars · /api/recommend · /api/statistics · 健康检查：/api/system/health</p>
+</footer>
+
+<div class="compare-bar" id="compareBar" hidden></div>
+
+<div class="modal" id="compareModal" hidden>
+    <div class="modal__backdrop" data-close="true"></div>
+    <div class="modal__body">
+        <header class="modal__head">
+            <h3>车型对比</h3>
+            <button type="button" class="modal__close" data-close="true">×</button>
+        </header>
+        <div class="modal__content" id="compareContent"></div>
+    </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
