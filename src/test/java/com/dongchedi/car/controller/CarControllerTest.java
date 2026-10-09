@@ -67,4 +67,12 @@ class CarControllerTest {
         mockMvc.perform(get("/api/cars/compare").param("ids", "1"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @DisplayName("访问不存在的静态资源返回 404 而不是 500")
+    void shouldReturn404ForMissingStaticResource() throws Exception {
+        mockMvc.perform(get("/not-exists.html"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("请求的资源不存在"));
+    }
 }
