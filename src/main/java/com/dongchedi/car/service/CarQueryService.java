@@ -3,8 +3,6 @@ package com.dongchedi.car.service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Service;
 
@@ -33,9 +31,6 @@ public class CarQueryService {
 
     private final CarRepository carRepository;
 
-    /** 排序结果缓存，避免每次请求都重新排序（⚠️ 本次提交引入了缺陷，见下文测试） */
-    private final Map<String, List<Car>> sortCache = new ConcurrentHashMap<>();
-
     public CarQueryService(CarRepository carRepository) {
         this.carRepository = carRepository;
     }
@@ -48,14 +43,9 @@ public class CarQueryService {
                 matched.add(car);
             }
         }
-        CarSort sort = CarSort.of(query.getSort());
-        List<Car> sorted = sortCache.computeIfAbsent(sort.name(), key -> {
-            List<Car> copy = new ArrayList<>(matched);
-            Comparator<Car> comparator = sort.comparator();
-            copy.sort(comparator);
-            return copy;
-        });
-        return PageResult.of(sorted, query.normalizedPage(), query.normalizedSize());
+        Comparator<Car> comparator = CarSort.of(query.getSort()).comparator();
+        matched.sort(comparator);
+        return PageResult.of(matched, query.normalizedPage(), query.normalizedSize());
     }
 
     public Car getById(Long id) {
