@@ -156,7 +156,7 @@ curl http://localhost:8080/api/system/health
 ```
 dongchedi
 ├── docs                      # 文档：Git 协作流程记录、接口说明、验收报告
-├── scripts                   # 本地与远程仓库同步校验脚本
+├── scripts                   # 仓库同步校验脚本、真实车型照片抓取脚本
 ├── src/main/java/com/dongchedi/car
 │   ├── controller            # CarController / RecommendController / StatisticsController / SystemController
 │   │                         # AuthController / FavoriteController / AdminController
@@ -247,8 +247,18 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 ## 十、说明
 
 - 车型数据为教学演示用途整理的公开信息，价格与销量均为示例值，不代表真实市场数据。
-- 车型配图为按车身形式（轿车 / SUV / MPV / 轿跑 / 跑车 / 皮卡 / 旅行车 / 两厢车）绘制的 SVG 矢量示意图，
-  位于 `src/main/resources/static/img/cars/`，**不是对应车型的实车照片**，不涉及第三方图片版权。
+- **车型配图分两层**：
+  1. 默认图片是按车身形式（轿车 / SUV / MPV / 轿跑 / 跑车 / 皮卡 / 旅行车 / 两厢车）绘制的 SVG 矢量示意图，
+     位于 `src/main/resources/static/img/cars/`，版权归本项目所有，可随仓库公开分发；
+  2. 需要真实车型照片时，执行下面的脚本按车型名抓取照片到 `static/img/cars/photos/`：
+
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File scripts/fetch-car-photos.ps1
+     ```
+
+     照片目录已在 `.gitignore` 中忽略，**只保存在本地、不会提交到公开仓库**，
+     版权归原图站所有，仅供本地个人学习演示使用；抓取时会生成 `photos-credits.json`
+     记录每张照片的来源站点与原始链接。页面会自动优先使用照片，照片缺失或加载失败时回退到矢量示意图。
 - 仓库中的提交作者信息为 `dongchedi-dev <dongchedi-dev@example.com>`（本机未配置全局 Git 身份时的占位值），
   如需换成自己的身份，可执行：
 

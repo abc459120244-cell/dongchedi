@@ -739,7 +739,37 @@ select:focus {
     z-index: 0;
 }
 
-.car-card__photo {
+/* 真实车型照片：加载成功后才显示，并把装饰与插画隐藏 */
+.car-card__bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity .25s ease;
+    z-index: 0;
+}
+
+.car-card__cover.has-photo .car-card__bg {
+    opacity: 1;
+}
+
+.car-card__cover.has-photo .car-card__art {
+    display: none;
+}
+
+.car-card__cover.has-photo::after {
+    inset: 0;
+    height: auto;
+    border-radius: 0;
+    transform: none;
+    background: linear-gradient(180deg, rgba(10, 12, 18, .05) 30%, rgba(10, 12, 18, .78) 100%);
+    z-index: 1;
+}
+
+/* 矢量示意图（照片缺失时的回退） */
+.car-card__art {
     position: absolute;
     right: -10px;
     bottom: 14px;
@@ -754,7 +784,7 @@ select:focus {
 .car-card__caption {
     position: relative;
     z-index: 2;
-    max-width: 62%;
+    max-width: 74%;
     text-shadow: 0 1px 6px rgba(20, 20, 24, .22);
 }
 
@@ -765,8 +795,10 @@ select:focus {
 }
 
 .car-card__name {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .car-card__badges {
@@ -775,7 +807,7 @@ select:focus {
     right: 10px;
     display: flex;
     gap: 6px;
-    z-index: 2;
+    z-index: 3;
 }
 
 .badge {
