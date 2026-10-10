@@ -126,6 +126,7 @@ code {
     font-weight: 500;
     padding: 6px 2px;
     border-bottom: 2px solid transparent;
+    white-space: nowrap;
 }
 
 .nav a:hover {
@@ -718,12 +719,13 @@ select:focus {
 
 .car-card__cover {
     position: relative;
-    height: 118px;
+    height: 158px;
     padding: 14px;
     color: #fff;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-end;
+    overflow: hidden;
 }
 
 .car-card__cover::after {
@@ -734,6 +736,26 @@ select:focus {
     border-radius: 50%;
     background: rgba(255, 255, 255, .16);
     transform: rotate(-8deg);
+    z-index: 0;
+}
+
+.car-card__photo {
+    position: absolute;
+    right: -10px;
+    bottom: 14px;
+    width: 58%;
+    max-height: 92px;
+    object-fit: contain;
+    opacity: .92;
+    filter: drop-shadow(0 8px 12px rgba(20, 20, 24, .22));
+    z-index: 1;
+}
+
+.car-card__caption {
+    position: relative;
+    z-index: 2;
+    max-width: 62%;
+    text-shadow: 0 1px 6px rgba(20, 20, 24, .22);
 }
 
 .car-card__brand {
@@ -745,7 +767,6 @@ select:focus {
 .car-card__name {
     font-size: 17px;
     font-weight: 700;
-    z-index: 1;
 }
 
 .car-card__badges {
@@ -1268,6 +1289,36 @@ select:focus {
     margin-top: 2px;
 }
 
+/* 车型示意图缩略图（矢量插画，配合品牌渐变底色） */
+.thumb {
+    flex: 0 0 auto;
+    width: 72px;
+    height: 44px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+.thumb img {
+    width: 82%;
+    height: auto;
+    display: block;
+}
+
+.thumb--sm {
+    width: 56px;
+    height: 34px;
+    border-radius: 8px;
+}
+
+.favorite-item__main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
 .footer {
     max-width: 1240px;
     margin: 40px auto 0;
@@ -1335,7 +1386,7 @@ select:focus {
     }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
     .topbar__inner {
         flex-wrap: wrap;
         gap: 12px;

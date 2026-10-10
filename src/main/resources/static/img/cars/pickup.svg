@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 140" role="img" aria-label="皮卡">
+  <ellipse cx="160" cy="116" rx="142" ry="7" fill="#000000" fill-opacity="0.10"/>
+  <path d="M10 102 L10 84 Q12 68 42 64 L84 58 Q98 34 132 32 L178 32 Q200 34 210 52 L216 62 L300 62 L304 68 L304 102 Z"
+        fill="#ffffff" fill-opacity="0.95"/>
+  <path d="M92 60 Q104 38 134 36 L176 36 Q196 38 204 56 L92 60 Z" fill="#0f172a" fill-opacity="0.20"/>
+  <path d="M172 36 L172 60" stroke="#ffffff" stroke-opacity="0.6" stroke-width="4"/>
+  <path d="M218 68 L300 68" stroke="#0f172a" stroke-opacity="0.14" stroke-width="4"/>
+  <path d="M224 34 L224 62" stroke="#ffffff" stroke-opacity="0.55" stroke-width="5"/>
+  <path d="M20 84 L302 84" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3"/>
+  <circle cx="86" cy="102" r="19" fill="#111827" fill-opacity="0.88"/>
+  <circle cx="86" cy="102" r="7" fill="#ffffff" fill-opacity="0.75"/>
+  <circle cx="244" cy="102" r="19" fill="#111827" fill-opacity="0.88"/>
+  <circle cx="244" cy="102" r="7" fill="#ffffff" fill-opacity="0.75"/>
+</svg>
