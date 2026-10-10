@@ -26,6 +26,7 @@
             <input id="keywordInput" type="search" placeholder="搜索车型、品牌，例如：比亚迪 / 插混 / 7 座" autocomplete="off">
             <button id="searchBtn" type="button">搜索</button>
         </div>
+        <div class="user-area" id="userArea"></div>
     </div>
 </header>
 
@@ -173,6 +174,57 @@
             <button type="button" class="modal__close" data-close="true">×</button>
         </header>
         <div class="modal__content" id="compareContent"></div>
+    </div>
+</div>
+
+<div class="modal" id="authModal" hidden>
+    <div class="modal__backdrop" data-auth-close="true"></div>
+    <div class="modal__body modal__body--narrow">
+        <header class="modal__head">
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab is-active" data-auth-tab="login">登录</button>
+                <button type="button" class="auth-tab" data-auth-tab="register">注册</button>
+            </div>
+            <button type="button" class="modal__close" data-auth-close="true">×</button>
+        </header>
+        <div class="modal__content">
+            <p class="auth-hint" id="authHint" hidden></p>
+            <form class="auth-form" id="authForm">
+                <label class="form-label" for="authUsername">用户名</label>
+                <input class="text-input" id="authUsername" name="username" autocomplete="username"
+                       placeholder="4~20 位字母、数字或下划线">
+
+                <label class="form-label" for="authPassword">密码</label>
+                <input class="text-input" id="authPassword" name="password" type="password"
+                       autocomplete="current-password" placeholder="6~32 位，需包含字母和数字">
+
+                <div id="authNicknameRow" hidden>
+                    <label class="form-label" for="authNickname">昵称（可选）</label>
+                    <input class="text-input" id="authNickname" name="nickname" placeholder="用于页面展示，例如：小王">
+                </div>
+
+                <p class="auth-error" id="authError" hidden></p>
+
+                <div class="form-actions">
+                    <button class="btn btn--primary" type="submit" id="authSubmitBtn">登录</button>
+                    <button class="btn btn--ghost" type="button" data-auth-close="true">取消</button>
+                </div>
+            </form>
+            <p class="auth-demo">
+                演示账号：<code>demo / demo123</code>（普通用户）、<code>admin / admin123</code>（管理员）
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="favoriteModal" hidden>
+    <div class="modal__backdrop" data-favorite-close="true"></div>
+    <div class="modal__body modal__body--narrow">
+        <header class="modal__head">
+            <h3>我的收藏</h3>
+            <button type="button" class="modal__close" data-favorite-close="true">×</button>
+        </header>
+        <div class="modal__content" id="favoriteContent"></div>
     </div>
 </div>
 

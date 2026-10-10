@@ -37,7 +37,9 @@
         favorites: new Set(loadFavorites()),
         favoriteOnly: false,
         compare: [],
-        coverSeed: 0
+        coverSeed: 0,
+        user: null,
+        authMode: 'login'
     };
 
     var dom = {};
@@ -151,12 +153,27 @@
         dom.compareContent = $('#compareContent');
         dom.toast = $('#toast');
 
-        persistFavorites();
+        dom.userArea = $('#userArea');
+        dom.authModal = $('#authModal');
+        dom.authForm = $('#authForm');
+        dom.authUsername = $('#authUsername');
+        dom.authPassword = $('#authPassword');
+        dom.authNickname = $('#authNickname');
+        dom.authNicknameRow = $('#authNicknameRow');
+        dom.authError = $('#authError');
+        dom.authHint = $('#authHint');
+        dom.authSubmitBtn = $('#authSubmitBtn');
+        dom.favoriteModal = $('#favoriteModal');
+        dom.favoriteContent = $('#favoriteContent');
+
+        // 先用未登录状态渲染顶栏，避免接口返回前右上角是空白
+        renderUserArea();
         bindEvents();
         loadFilters();
         loadRecommendOptions();
         loadStatistics();
         loadCars();
+        loadSession();
     }
 
     function bindEvents() {
@@ -282,9 +299,49 @@
             }
         });
 
+        dom.userArea.addEventListener('click', function (event) {
+            var action = event.target.closest('[data-user-action]');
+            if (!action) {
+                return;
+            }
+            if (action.dataset.userAction === 'login') {
+                openAuthModal('login');
+            } else if (action.dataset.userAction === 'logout') {
+                logout();
+            } else if (action.dataset.userAction === 'favorites') {
+                openFavoriteModal();
+            }
+        });
+
+        dom.authModal.addEventListener('click', function (event) {
+            if (event.target.closest('[data-auth-close]')) {
+                closeAuthModal();
+                return;
+            }
+            var tab = event.target.closest('[data-auth-tab]');
+            if (tab) {
+                setAuthMode(tab.dataset.authTab);
+            }
+        });
+
+        dom.authForm.addEventListener('submit', submitAuth);
+
+        dom.favoriteModal.addEventListener('click', function (event) {
+            if (event.target.closest('[data-favorite-close]')) {
+                closeFavoriteModal();
+                return;
+            }
+            var removeBtn = event.target.closest('[data-favorite-remove]');
+            if (removeBtn) {
+                removeFavorite(Number(removeBtn.dataset.favoriteRemove));
+            }
+        });
+
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 closeCompare();
+                closeAuthModal();
+                closeFavoriteModal();
             }
         });
     }
@@ -541,13 +598,33 @@
     /* ----------------------------- 收藏与对比 ----------------------------- */
 
     function toggleFavorite(id) {
-        if (state.favorites.has(id)) {
-            state.favorites.delete(id);
-        } else {
-            state.favorites.add(id);
+        if (!state.user) {
+            // 未登录：临时保存在浏览器本地，并引导用户登录
+            if (state.favorites.has(id)) {
+                state.favorites.delete(id);
+            } else {
+                state.favorites.add(id);
+            }
+            applyFavoritesChange();
+            renderCars(state.lastPage);
+            toast('已临时收藏到本机，登录后可保存到账号');
+            if (!state.authPrompted) {
+                state.authPrompted = true;
+                openAuthModal('login', '收藏功能需要登录：登录后收藏会保存到你的账号，可在右上角「我的收藏」中查看。');
+            }
+            return;
         }
-        persistFavorites();
-        renderCars(state.lastPage);
+        var favorited = state.favorites.has(id);
+        fetchJson('/api/favorites/' + id, {method: favorited ? 'DELETE' : 'POST'})
+            .then(function (result) {
+                state.favorites = new Set(result.ids);
+                applyFavoritesChange();
+                renderCars(state.lastPage);
+                toast(result.favorited ? '已加入收藏' : '已取消收藏');
+            })
+            .catch(function (error) {
+                toast(error.message);
+            });
     }
 
     function toggleCompare(id) {
@@ -570,6 +647,172 @@
         }
         renderCompareBar();
         renderCars(state.lastPage);
+    }
+
+    /* ----------------------------- 登录与收藏 ----------------------------- */
+
+    function loadSession() {
+        fetchJson('/api/auth/me')
+            .then(function (user) {
+                state.user = user;
+                return loadServerFavorites();
+            })
+            .catch(function () {
+                // 未登录属于正常情况，回退到浏览器本地收藏
+                state.user = null;
+                state.favorites = new Set(loadFavorites());
+                applyFavoritesChange();
+                renderCars(state.lastPage);
+            });
+    }
+
+    function loadServerFavorites() {
+        return fetchJson('/api/favorites/ids').then(function (ids) {
+            state.favorites = new Set(ids);
+            applyFavoritesChange();
+            renderCars(state.lastPage);
+        });
+    }
+
+    function applyFavoritesChange() {
+        dom.favoriteCount.textContent = String(state.favorites.size);
+        if (!state.user) {
+            // 未登录时收藏暂存在浏览器本地
+            persistFavorites();
+        }
+        renderUserArea();
+    }
+
+    function renderUserArea() {
+        if (!state.user) {
+            dom.userArea.innerHTML = '<button type="button" class="btn btn--primary btn--small"'
+                + ' data-user-action="login">登录 / 注册</button>';
+            return;
+        }
+        var name = state.user.displayName || state.user.username;
+        dom.userArea.innerHTML = '<span class="user-chip">'
+            + '<span class="user-chip__avatar">' + escapeHtml(name.substring(0, 1).toUpperCase()) + '</span>'
+            + '<span class="user-chip__name">' + escapeHtml(name) + '</span>'
+            + (state.user.role === 'ADMIN' ? '<em class="user-chip__role">管理员</em>' : '')
+            + '</span>'
+            + '<button type="button" class="icon-btn" data-user-action="favorites">我的收藏 (<em>'
+            + state.favorites.size + '</em>)</button>'
+            + '<button type="button" class="icon-btn" data-user-action="logout">退出</button>';
+    }
+
+    function openAuthModal(mode, hint) {
+        setAuthMode(mode === 'register' ? 'register' : 'login');
+        if (hint) {
+            dom.authHint.textContent = hint;
+            dom.authHint.hidden = false;
+        } else {
+            dom.authHint.hidden = true;
+        }
+        dom.authModal.hidden = false;
+        dom.authUsername.focus();
+    }
+
+    function setAuthMode(mode) {
+        state.authMode = mode === 'register' ? 'register' : 'login';
+        Array.prototype.forEach.call(dom.authModal.querySelectorAll('.auth-tab'), function (tab) {
+            tab.classList.toggle('is-active', tab.dataset.authTab === state.authMode);
+        });
+        dom.authNicknameRow.hidden = state.authMode !== 'register';
+        dom.authSubmitBtn.textContent = state.authMode === 'register' ? '注册并登录' : '登录';
+        dom.authError.hidden = true;
+    }
+
+    function closeAuthModal() {
+        dom.authModal.hidden = true;
+        dom.authError.hidden = true;
+    }
+
+    function submitAuth(event) {
+        event.preventDefault();
+        var payload = {
+            username: dom.authUsername.value.trim(),
+            password: dom.authPassword.value
+        };
+        if (state.authMode === 'register') {
+            payload.nickname = dom.authNickname.value.trim();
+        }
+        var mode = state.authMode;
+        dom.authSubmitBtn.disabled = true;
+        dom.authError.hidden = true;
+
+        fetchJson('/api/auth/' + mode, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).then(function (user) {
+            state.user = user;
+            dom.authPassword.value = '';
+            closeAuthModal();
+            toast((mode === 'register' ? '注册成功，已自动登录：' : '登录成功，欢迎回来 ')
+                + (user.displayName || user.username));
+            return loadServerFavorites();
+        }).catch(function (error) {
+            dom.authError.textContent = error.message;
+            dom.authError.hidden = false;
+        }).finally(function () {
+            dom.authSubmitBtn.disabled = false;
+        });
+    }
+
+    function logout() {
+        fetchJson('/api/auth/logout', {method: 'POST'}).then(function () {
+            state.user = null;
+            state.favorites = new Set(loadFavorites());
+            applyFavoritesChange();
+            renderCars(state.lastPage);
+            toast('已退出登录');
+        }).catch(function (error) {
+            toast(error.message);
+        });
+    }
+
+    function openFavoriteModal() {
+        dom.favoriteModal.hidden = false;
+        dom.favoriteContent.innerHTML = '<p class="placeholder">正在加载收藏…</p>';
+        fetchJson('/api/favorites').then(renderFavoriteList).catch(function (error) {
+            dom.favoriteContent.innerHTML = '<p class="placeholder">加载失败：'
+                + escapeHtml(error.message) + '</p>';
+        });
+    }
+
+    function renderFavoriteList(cars) {
+        if (!cars || !cars.length) {
+            dom.favoriteContent.innerHTML = '<p class="placeholder">还没有收藏车型，'
+                + '在车型卡片上点击「收藏」即可加入。</p>';
+            return;
+        }
+        dom.favoriteContent.innerHTML = '<div class="favorite-list">'
+            + cars.map(function (car) {
+                return '<div class="favorite-item">'
+                    + '<div><strong>' + escapeHtml(car.name) + '</strong>'
+                    + '<div class="favorite-item__meta">' + num(car.price).toFixed(2) + ' 万 · '
+                    + escapeHtml(car.energyTypeLabel) + ' · ' + escapeHtml(car.levelLabel) + ' · ★ '
+                    + num(car.userScore).toFixed(1) + '</div></div>'
+                    + '<button type="button" class="icon-btn" data-favorite-remove="' + car.id + '">移除</button>'
+                    + '</div>';
+            }).join('')
+            + '</div>';
+    }
+
+    function removeFavorite(id) {
+        fetchJson('/api/favorites/' + id, {method: 'DELETE'}).then(function (result) {
+            state.favorites = new Set(result.ids);
+            applyFavoritesChange();
+            renderCars(state.lastPage);
+            return fetchJson('/api/favorites');
+        }).then(renderFavoriteList).catch(function (error) {
+            toast(error.message);
+        });
+    }
+
+    function closeFavoriteModal() {
+        dom.favoriteModal.hidden = true;
+        dom.favoriteContent.innerHTML = '';
     }
 
     function findCar(id) {
