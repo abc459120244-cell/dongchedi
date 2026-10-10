@@ -136,8 +136,9 @@
     function carThumb(car, extraClass) {
         return '<span class="thumb' + (extraClass ? ' ' + extraClass : '')
             + '" style="background:' + brandGradient(car.brand) + '">'
-            + '<img src="' + carPhoto(car) + '" alt="' + escapeHtml(car.bodyTypeLabel || '车型')
-            + ' 示意图" loading="lazy"></span>';
+            + '<img src="/img/cars/photos/' + car.id + '.jpg" alt="'
+            + escapeHtml(car.bodyTypeLabel || '车型') + '" loading="lazy"'
+            + ' onerror="this.onerror=null;this.src=\'' + carPhoto(car) + '\'"></span>';
     }
 
     /* ----------------------------- 初始化 ----------------------------- */
@@ -597,8 +598,10 @@
 
         return '<article class="car-card">'
             + '<div class="car-card__cover" style="background:' + brandGradient(car.brand) + '">'
+            + '<img class="car-card__bg" src="/img/cars/photos/' + car.id + '.jpg" alt="" loading="lazy"'
+            + ' onload="this.parentNode.classList.add(\'has-photo\')" onerror="this.remove()">'
             + '<div class="car-card__badges">' + badges + '</div>'
-            + '<img class="car-card__photo" src="' + carPhoto(car) + '" alt="'
+            + '<img class="car-card__art" src="' + carPhoto(car) + '" alt="'
             + escapeHtml(car.bodyTypeLabel) + ' 示意图" loading="lazy">'
             + '<div class="car-card__caption">'
             + '<div class="car-card__brand">' + escapeHtml(car.brand) + ' · ' + escapeHtml(car.bodyTypeLabel) + '</div>'

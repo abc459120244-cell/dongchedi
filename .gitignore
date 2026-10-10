@@ -30,6 +30,10 @@ logs/
 *.pid
 *.hprof
 
+# ---- 本地抓取的车型照片（第三方版权图片，仅本地个人使用，不入库）----
+# 需要本地展示真实车图时执行：powershell -ExecutionPolicy Bypass -File scripts/fetch-car-photos.ps1
+src/main/resources/static/img/cars/photos/
+
 # ---- Env / Secret ----
 .env
 .env.*

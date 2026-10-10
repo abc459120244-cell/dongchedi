@@ -164,7 +164,10 @@
 <footer class="footer">
     <p>车帝选车 · 基于 Spring Boot 3.5 + Java 21 的汽车筛选与推荐系统示例项目</p>
     <p class="footer__sub">接口：/api/cars · /api/recommend · /api/statistics · 健康检查：/api/system/health</p>
-    <p class="footer__sub">车型配图为按车身形式绘制的矢量示意图（非实车照片），版权归本项目所有。</p>
+    <p class="footer__sub">
+        车型配图优先使用本地抓取的真实车型照片（仅供本地学习使用，版权归原图站所有）；
+        未提供照片时自动回退为按车身形式绘制的矢量示意图。
+    </p>
 </footer>
 
 <div class="compare-bar" id="compareBar" hidden></div>
