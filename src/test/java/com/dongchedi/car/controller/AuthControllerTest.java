@@ -75,6 +75,16 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("请求体不是合法 JSON 时返回 400")
+    void shouldRejectMalformedBody() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\\username\\:\\demo\\}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("请求体格式错误，请提交合法的 JSON"));
+    }
+
+    @Test
     @DisplayName("使用演示账号登录、查询、退出后变回未登录")
     void shouldLoginQueryAndLogout() throws Exception {
         MockHttpSession session = login("demo", "demo123");
