@@ -247,6 +247,8 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 ## 十、说明
 
 - 车型数据为教学演示用途整理的公开信息，价格与销量均为示例值，不代表真实市场数据。
+- 车型配图为按车身形式（轿车 / SUV / MPV / 轿跑 / 跑车 / 皮卡 / 旅行车 / 两厢车）绘制的 SVG 矢量示意图，
+  位于 `src/main/resources/static/img/cars/`，**不是对应车型的实车照片**，不涉及第三方图片版权。
 - 仓库中的提交作者信息为 `dongchedi-dev <dongchedi-dev@example.com>`（本机未配置全局 Git 身份时的占位值），
   如需换成自己的身份，可执行：
 

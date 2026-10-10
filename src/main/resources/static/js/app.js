@@ -127,6 +127,19 @@
             + ((hue + 34) % 360) + ', 78%, 62%))';
     }
 
+    /** 车身形式对应的矢量示意图路径（与后端 BodyType 枚举名小写一致） */
+    function carPhoto(car) {
+        return '/img/cars/' + String(car.bodyType || 'SEDAN').toLowerCase() + '.svg';
+    }
+
+    /** 品牌渐变底 + 车身示意图的小缩略图 */
+    function carThumb(car, extraClass) {
+        return '<span class="thumb' + (extraClass ? ' ' + extraClass : '')
+            + '" style="background:' + brandGradient(car.brand) + '">'
+            + '<img src="' + carPhoto(car) + '" alt="' + escapeHtml(car.bodyTypeLabel || '车型')
+            + ' 示意图" loading="lazy"></span>';
+    }
+
     /* ----------------------------- 初始化 ----------------------------- */
 
     function init() {
@@ -585,8 +598,12 @@
         return '<article class="car-card">'
             + '<div class="car-card__cover" style="background:' + brandGradient(car.brand) + '">'
             + '<div class="car-card__badges">' + badges + '</div>'
+            + '<img class="car-card__photo" src="' + carPhoto(car) + '" alt="'
+            + escapeHtml(car.bodyTypeLabel) + ' 示意图" loading="lazy">'
+            + '<div class="car-card__caption">'
             + '<div class="car-card__brand">' + escapeHtml(car.brand) + ' · ' + escapeHtml(car.bodyTypeLabel) + '</div>'
             + '<div class="car-card__name">' + escapeHtml(car.name) + '</div>'
+            + '</div>'
             + '</div>'
             + '<div class="car-card__body">'
             + '<div class="car-card__price"><strong>' + num(car.price).toFixed(2) + ' 万</strong>'
@@ -819,10 +836,11 @@
         dom.favoriteContent.innerHTML = '<div class="favorite-list">'
             + cars.map(function (car) {
                 return '<div class="favorite-item">'
+                    + '<div class="favorite-item__main">' + carThumb(car)
                     + '<div><strong>' + escapeHtml(car.name) + '</strong>'
                     + '<div class="favorite-item__meta">' + num(car.price).toFixed(2) + ' 万 · '
                     + escapeHtml(car.energyTypeLabel) + ' · ' + escapeHtml(car.levelLabel) + ' · ★ '
-                    + num(car.userScore).toFixed(1) + '</div></div>'
+                    + num(car.userScore).toFixed(1) + '</div></div></div>'
                     + '<button type="button" class="icon-btn" data-favorite-remove="' + car.id + '">移除</button>'
                     + '</div>';
             }).join('')
@@ -1043,6 +1061,7 @@
                 + '<div class="rec-item__rank">' + item.rank + '</div>'
                 + '<div>'
                 + '<div class="rec-item__title"><strong>' + escapeHtml(item.car.name) + '</strong>'
+                + carThumb(item.car, 'thumb--sm')
                 + '<span class="tag">' + num(item.car.price).toFixed(2) + ' 万</span>'
                 + '<span class="tag">' + escapeHtml(item.car.energyTypeLabel) + '</span>'
                 + '<span class="rec-item__score">' + num(item.score).toFixed(1) + ' 分</span></div>'

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 140" role="img" aria-label="SUV">
+  <ellipse cx="160" cy="116" rx="140" ry="7" fill="#000000" fill-opacity="0.10"/>
+  <path d="M12 102 L12 86 Q14 68 44 63 L78 56 Q96 32 138 30 L206 30 Q240 32 254 52 L280 66 Q302 71 306 84 L306 102 Z"
+        fill="#ffffff" fill-opacity="0.95"/>
+  <path d="M88 58 Q104 38 140 36 L202 36 Q232 38 246 56 L88 58 Z" fill="#0f172a" fill-opacity="0.20"/>
+  <path d="M164 36 L164 58" stroke="#ffffff" stroke-opacity="0.6" stroke-width="4"/>
+  <path d="M104 26 L214 26" stroke="#ffffff" stroke-opacity="0.8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M22 84 L304 84" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3"/>
+  <circle cx="88" cy="102" r="18" fill="#111827" fill-opacity="0.88"/>
+  <circle cx="88" cy="102" r="7" fill="#ffffff" fill-opacity="0.75"/>
+  <circle cx="240" cy="102" r="18" fill="#111827" fill-opacity="0.88"/>
+  <circle cx="240" cy="102" r="7" fill="#ffffff" fill-opacity="0.75"/>
+</svg>
