@@ -28,7 +28,7 @@ class CarControllerTest {
         mockMvc.perform(get("/api/cars").param("size", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(5)))
-                .andExpect(jsonPath("$.total").value(35))
+                .andExpect(jsonPath("$.total").value(63))
                 .andExpect(jsonPath("$.page").value(1));
     }
 
@@ -40,7 +40,7 @@ class CarControllerTest {
                         .param("maxPrice", "20")
                         .param("sort", "PRICE_ASC"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.total").value(3))
+                .andExpect(jsonPath("$.total").value(4))
                 .andExpect(jsonPath("$.items[0].name").value("五菱 宏光MINIEV"));
     }
 
@@ -49,8 +49,21 @@ class CarControllerTest {
     void shouldReturnFilterOptions() throws Exception {
         mockMvc.perform(get("/api/cars/filters"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalCars").value(35))
-                .andExpect(jsonPath("$.brands.length()").value(23));
+                .andExpect(jsonPath("$.totalCars").value(63))
+                .andExpect(jsonPath("$.brands.length()").value(33));
+    }
+
+    @Test
+    @DisplayName("GET /api/cars 支持按零百加速筛选性能车")
+    void shouldFilterPerformanceCars() throws Exception {
+        mockMvc.perform(get("/api/cars")
+                        .param("maxAcceleration", "4")
+                        .param("sort", "ACCELERATION_ASC")
+                        .param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].name").value("特斯拉 Model S Plaid"))
+                .andExpect(jsonPath("$.items[0].performanceCar").value(true))
+                .andExpect(jsonPath("$.items[0].accelerationLabel").value("零百 2.1s"));
     }
 
     @Test

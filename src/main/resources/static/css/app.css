@@ -226,6 +226,7 @@ code {
     font-size: 14px;
     font-family: inherit;
     cursor: pointer;
+    white-space: nowrap;
     transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
@@ -770,6 +771,12 @@ select:focus {
     border-color: transparent;
 }
 
+.badge--performance {
+    background: rgba(255, 77, 31, .92);
+    border-color: transparent;
+    font-weight: 600;
+}
+
 .car-card__body {
     padding: 14px;
     display: flex;
@@ -1276,6 +1283,34 @@ select:focus {
 }
 
 /* ---------- 响应式 ---------- */
+/* 中等宽度：顶栏元素收紧，避免导航与用户区被挤到换行 */
+@media (max-width: 1100px) {
+    .topbar__inner {
+        gap: 14px;
+    }
+
+    .nav {
+        gap: 12px;
+        margin-left: 0;
+    }
+
+    .search {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .user-area {
+        flex: 0 0 auto;
+    }
+
+    .user-chip__name {
+        max-width: 96px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
 @media (max-width: 1080px) {
     .hero__inner,
     .panel--recommend,

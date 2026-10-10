@@ -38,6 +38,10 @@ public class RecommendService {
     /** 动力归一化基准（kW） */
     private static final double POWER_BASELINE = 330d;
 
+    /** 零百加速归一化区间：2s 记满分，10s 记 0 分 */
+    private static final double ACCELERATION_FAST_BOUND = 2d;
+    private static final double ACCELERATION_SLOW_BOUND = 10d;
+
     /** 允许超出预算的上浮比例 */
     private static final double BUDGET_TOLERANCE = 1.15d;
 
@@ -138,8 +142,18 @@ public class RecommendService {
                 clamp(Math.log10(car.monthlySales() + 1) / Math.log10(salesBaseline + 1)));
         scores.put(ScoreDimension.SPACE, spaceScore(car, minSeats));
         scores.put(ScoreDimension.ECONOMY, economyScore(car));
-        scores.put(ScoreDimension.POWER, clamp(car.maxPowerKw() / POWER_BASELINE));
+        scores.put(ScoreDimension.POWER, powerScore(car));
         return scores;
+    }
+
+    /**
+     * 动力性能：最大功率占 60%，零百加速占 40%，让性能车在「动力性能优先」时排到前面。
+     */
+    private double powerScore(Car car) {
+        double power = clamp(car.maxPowerKw() / POWER_BASELINE);
+        double acceleration = clamp((ACCELERATION_SLOW_BOUND - car.zeroToHundredSeconds())
+                / (ACCELERATION_SLOW_BOUND - ACCELERATION_FAST_BOUND));
+        return clamp(power * 0.6d + acceleration * 0.4d);
     }
 
     /**
@@ -227,6 +241,8 @@ public class RecommendService {
 
         reasons.add(String.format("用户口碑 %.1f 分（满分 5 分），月销 %s 辆",
                 car.userScore(), String.format(Locale.ROOT, "%,d", car.monthlySales())));
+        reasons.add(String.format(Locale.ROOT, "动力表现：最大功率 %d kW，零百加速 %.1f 秒%s",
+                car.maxPowerKw(), car.zeroToHundredSeconds(), car.isPerformanceCar() ? "（性能车）" : ""));
         reasons.add("能耗表现：" + car.getEnergyDescription());
 
         if (car.seats() >= minSeats) {

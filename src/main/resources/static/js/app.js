@@ -29,6 +29,7 @@
             minRange: null,
             maxFuel: null,
             minScore: null,
+            maxAcceleration: null,
             sort: 'SALES_DESC',
             page: 1,
             size: 12
@@ -337,6 +338,21 @@
             }
         });
 
+        // 首页「只看性能车」快捷入口：筛选零百 5 秒内的车型并按加速排序
+        $('#performanceShortcut').addEventListener('click', function () {
+            state.query.scene = ['PERFORMANCE'];
+            state.query.maxAcceleration = 5;
+            state.query.sort = 'ACCELERATION_ASC';
+            state.query.page = 1;
+            renderFilterPanel();
+            if (state.filters) {
+                dom.sortSelect.value = state.query.sort;
+            }
+            loadCars();
+            document.getElementById('cars').scrollIntoView({behavior: 'smooth'});
+            toast('已筛选零百 5 秒内的性能车，并按加速从快到慢排序');
+        });
+
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 closeCompare();
@@ -412,6 +428,14 @@
             }).join('')
             + '</div></div>';
 
+        html += '<div class="filter-group"><div class="filter-group__title">零百加速（不超过）</div>'
+            + '<div class="filter-chips">'
+            + [3, 4, 5, 7].map(function (seconds) {
+                return '<button type="button" class="chip' + (state.query.maxAcceleration === seconds ? ' is-active' : '')
+                    + '" data-group="maxAcceleration" data-value="' + seconds + '">' + seconds + ' 秒内</button>';
+            }).join('')
+            + '</div></div>';
+
         dom.filterPanel.innerHTML = html;
     }
 
@@ -429,7 +453,7 @@
     }
 
     function toggleFilter(group, rawValue) {
-        if (group === 'minSeats' || group === 'minScore') {
+        if (group === 'minSeats' || group === 'minScore' || group === 'maxAcceleration') {
             var value = Number(rawValue);
             state.query[group] = state.query[group] === value ? null : value;
         } else {
@@ -469,7 +493,8 @@
         ['brand', 'level', 'bodyType', 'energyType', 'scene'].forEach(function (key) {
             state.query[key] = [];
         });
-        ['minPrice', 'maxPrice', 'minSeats', 'minRange', 'maxFuel', 'minScore'].forEach(function (key) {
+        ['minPrice', 'maxPrice', 'minSeats', 'minRange', 'maxFuel', 'minScore', 'maxAcceleration']
+            .forEach(function (key) {
             state.query[key] = null;
         });
         state.query.page = 1;
@@ -491,7 +516,8 @@
                 params.append(key, value);
             });
         });
-        ['minPrice', 'maxPrice', 'minSeats', 'minRange', 'maxFuel', 'minScore'].forEach(function (key) {
+        ['minPrice', 'maxPrice', 'minSeats', 'minRange', 'maxFuel', 'minScore', 'maxAcceleration']
+            .forEach(function (key) {
             if (query[key] !== null && query[key] !== '' && !Number.isNaN(query[key])) {
                 params.set(key, query[key]);
             }
@@ -544,6 +570,9 @@
             return item.id === car.id;
         });
         var badges = '';
+        if (car.performanceCar) {
+            badges += '<span class="badge badge--performance">性能车</span>';
+        }
         if (car.newEnergy) {
             badges += '<span class="badge badge--newenergy">新能源</span>';
         }
@@ -566,7 +595,8 @@
             + '<p class="car-card__desc">' + escapeHtml(car.highlight) + '</p>'
             + '<div class="car-card__meta"><span class="tag">' + escapeHtml(car.energyDescription) + '</span>'
             + '<span class="tag">轴距 ' + car.wheelbaseMm + 'mm</span>'
-            + '<span class="tag">' + car.maxPowerKw + 'kW</span></div>'
+            + '<span class="tag">' + car.maxPowerKw + 'kW</span>'
+            + '<span class="tag">' + escapeHtml(car.accelerationLabel) + '</span></div>'
             + '<div class="car-card__foot">'
             + '<span class="car-card__score"><b>★ ' + num(car.userScore).toFixed(1) + '</b> · 月销 '
             + num(car.monthlySales).toLocaleString('zh-CN') + '</span>'
@@ -881,6 +911,11 @@
                 best: function (list) { return maxIndex(list, function (car) { return car.wheelbaseMm; }); }},
             {label: '最大功率 (kW)', value: function (car) { return car.maxPowerKw; },
                 best: function (list) { return maxIndex(list, function (car) { return car.maxPowerKw; }); }},
+            {label: '零百加速 (s)', value: function (car) { return num(car.zeroToHundredSeconds).toFixed(1); },
+                best: function (list) {
+                    return minIndex(list, function (car) { return num(car.zeroToHundredSeconds); });
+                }},
+            {label: '性能车', value: function (car) { return car.performanceCar ? '是' : '否'; }},
             {label: '能耗表现', value: function (car) { return escapeHtml(car.energyDescription); }},
             {label: '月销量', value: function (car) { return num(car.monthlySales).toLocaleString('zh-CN'); },
                 best: function (list) { return maxIndex(list, function (car) { return car.monthlySales; }); }},
@@ -1051,7 +1086,7 @@
             {value: overview.totalCars + ' 款', label: '在售车型'},
             {value: overview.totalBrands + ' 个', label: '覆盖品牌'},
             {value: (overview.newEnergyRatio * 100).toFixed(0) + '%', label: '新能源占比'},
-            {value: overview.averagePrice.toFixed(1) + ' 万', label: '平均指导价'}
+            {value: overview.performanceCarCount + ' 款', label: '零百 5 秒内性能车'}
         ].map(function (stat) {
             return '<div class="stat"><div class="stat__value">' + escapeHtml(stat.value) + '</div>'
                 + '<div class="stat__label">' + escapeHtml(stat.label) + '</div></div>';

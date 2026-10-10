@@ -25,7 +25,8 @@ public record CarFilter(
         Integer minSeats,
         Integer minRange,
         Double maxFuel,
-        Double minScore) {
+        Double minScore,
+        Double maxAcceleration) {
 
     public static CarFilter from(CarQuery query) {
         return new CarFilter(
@@ -40,7 +41,8 @@ public record CarFilter(
                 query.getMinSeats(),
                 query.getMinRange(),
                 query.getMaxFuel(),
-                query.getMinScore());
+                query.getMinScore(),
+                query.getMaxAcceleration());
     }
 
     /**
@@ -80,6 +82,9 @@ public record CarFilter(
             return false;
         }
         if (minScore != null && car.userScore() < minScore) {
+            return false;
+        }
+        if (maxAcceleration != null && car.zeroToHundredSeconds() > maxAcceleration) {
             return false;
         }
         return matchesKeyword(car);
