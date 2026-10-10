@@ -8,6 +8,7 @@ import java.util.List;
 public record StatisticsOverview(
         int totalCars,
         int totalBrands,
+        int performanceCarCount,
         double averagePrice,
         double minPrice,
         double maxPrice,

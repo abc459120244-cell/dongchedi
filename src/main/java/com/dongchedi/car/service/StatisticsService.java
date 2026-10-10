@@ -53,6 +53,7 @@ public class StatisticsService {
         return new StatisticsOverview(
                 total,
                 (int) cars.stream().map(Car::brand).distinct().count(),
+                (int) cars.stream().filter(Car::isPerformanceCar).count(),
                 round(averagePrice),
                 round(minPrice),
                 round(maxPrice),

@@ -18,6 +18,7 @@ public enum CarSort {
             .thenComparing(Comparator.comparingInt(Car::monthlySales).reversed())),
     POWER_DESC("动力优先", Comparator.comparingInt(Car::maxPowerKw).reversed()),
     RANGE_DESC("续航优先", Comparator.comparingInt(CarSort::rangeOf).reversed()),
+    ACCELERATION_ASC("加速最快（零百）", Comparator.comparingDouble(Car::zeroToHundredSeconds)),
     ID_ASC("默认排序", Comparator.comparingLong(Car::id));
 
     private final String label;

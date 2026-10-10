@@ -30,6 +30,9 @@ public class CarQuery {
     private Double maxFuel;
     private Double minScore;
 
+    /** 零百加速上限（秒），用于筛选性能车 */
+    private Double maxAcceleration;
+
     private String sort = "SALES_DESC";
     private int page = 1;
     private int size = DEFAULT_PAGE_SIZE;
@@ -128,6 +131,14 @@ public class CarQuery {
 
     public void setMinScore(Double minScore) {
         this.minScore = minScore;
+    }
+
+    public Double getMaxAcceleration() {
+        return maxAcceleration;
+    }
+
+    public void setMaxAcceleration(Double maxAcceleration) {
+        this.maxAcceleration = maxAcceleration;
     }
 
     public String getSort() {

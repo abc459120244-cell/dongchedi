@@ -35,8 +35,9 @@ class StatisticsServiceTest {
     void shouldSummarizeOverview() {
         StatisticsOverview overview = service.overview();
 
-        assertThat(overview.totalCars()).isEqualTo(35);
-        assertThat(overview.totalBrands()).isEqualTo(23);
+        assertThat(overview.totalCars()).isEqualTo(63);
+        assertThat(overview.totalBrands()).isEqualTo(33);
+        assertThat(overview.performanceCarCount()).isGreaterThanOrEqualTo(15);
         assertThat(overview.minPrice()).isLessThan(overview.averagePrice());
         assertThat(overview.averagePrice()).isLessThan(overview.maxPrice());
         assertThat(overview.newEnergyRatio()).isBetween(0.0, 1.0);
@@ -62,7 +63,7 @@ class StatisticsServiceTest {
     void shouldRankBrandsBySales() {
         List<BrandRanking> rankings = service.brandRankings();
 
-        assertThat(rankings).hasSize(23);
+        assertThat(rankings).hasSize(33);
         assertThat(rankings).isSortedAccordingTo(
                 (a, b) -> Long.compare(b.totalMonthlySales(), a.totalMonthlySales()));
         assertThat(rankings.get(0).rank()).isEqualTo(1);

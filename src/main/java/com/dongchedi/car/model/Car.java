@@ -1,6 +1,7 @@
 package com.dongchedi.car.model;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 车型（车辆配置）信息。
@@ -21,6 +22,7 @@ public record Car(
         int heightMm,
         int wheelbaseMm,
         int maxPowerKw,
+        double zeroToHundredSeconds,
         Double fuelConsumption,
         Integer electricRangeKm,
         int monthlySales,
@@ -50,6 +52,20 @@ public record Car(
 
     public String getPriceLabel() {
         return String.format("%.2f 万", price);
+    }
+
+    /**
+     * 零百加速展示文案。
+     */
+    public String getAccelerationLabel() {
+        return String.format(Locale.ROOT, "零百 %.1fs", zeroToHundredSeconds);
+    }
+
+    /**
+     * 是否属于性能车：零百加速 5 秒以内。
+     */
+    public boolean isPerformanceCar() {
+        return zeroToHundredSeconds > 0 && zeroToHundredSeconds <= 5.0d;
     }
 
     public List<String> getSceneLabels() {
