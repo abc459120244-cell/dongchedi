@@ -17,7 +17,8 @@
 - **智能推荐**：按预算、场景、能源偏好、优先级（综合 / 经济性 / 动力 / 空间 / 口碑）加权打分，输出推荐理由与得分构成。
 - **车型对比**：勾选 2~4 款车生成横向对比表，自动高亮更优项。
 - **市场榜单**：品牌销量排行、能源类型分布、价格区间分布、用车场景分布。
-- **收藏**：基于浏览器本地存储保存关注的车型。
+- **用户系统**：注册 / 登录 / 退出、基于服务端会话的登录态、普通用户与管理员两种角色。
+- **收藏**：登录后收藏保存到账号（按用户隔离），未登录时临时保存在浏览器本地。
 
 ## 二、技术栈
 
@@ -27,6 +28,7 @@
 | 应用框架 | Spring Boot 3.5.15、Spring Framework 6.2 |
 | Web / 参数校验 | Spring MVC、Validation（Jakarta Bean Validation） |
 | 序列化 | Jackson |
+| 认证与密码 | `spring-security-crypto`（BCrypt）+ Session 登录拦截器 |
 | 数据层 | JSON 种子数据集 + 内存仓库（`CarRepository` 接口可平滑替换为 JPA / MyBatis 实现） |
 | 前端 | 原生 HTML / CSS / JavaScript（无第三方依赖） |
 | 测试 | JUnit 5 + AssertJ + MockMvc（32 个测试用例） |
@@ -76,10 +78,57 @@ curl http://localhost:8080/api/system/health
 | GET | `/api/statistics/overview` | 市场概览统计 |
 | GET | `/api/statistics/brand-ranking?limit=10` | 品牌销量排行榜 |
 | GET | `/api/statistics/scene-distribution` | 用车场景分布 |
+| POST | `/api/auth/register` | 注册并自动登录 |
+| POST | `/api/auth/login` | 登录（写入服务端会话） |
+| POST | `/api/auth/logout` | 退出登录 |
+| GET | `/api/auth/me` | 当前登录用户（未登录返回 401） |
+| GET | `/api/favorites` | 我的收藏，返回完整车型（需登录） |
+| GET | `/api/favorites/ids` | 我的收藏 id 列表（需登录） |
+| POST | `/api/favorites/{carId}` | 收藏车型（需登录） |
+| DELETE | `/api/favorites/{carId}` | 取消收藏（需登录） |
+| DELETE | `/api/favorites` | 清空收藏（需登录） |
+| GET | `/api/admin/users` | 用户列表（需管理员角色） |
 
 更多参数与返回示例见 [docs/接口说明.md](docs/接口说明.md)。
 
-## 五、推荐算法说明
+## 五、用户登录系统
+
+### 5.1 演示账号
+
+| 账号 | 密码 | 角色 | 初始收藏 |
+| --- | --- | --- | --- |
+| `demo` | `demo123` | 普通用户 | 3 款（秦PLUS DM-i、Model Y、理想 L7） |
+| `admin` | `admin123` | 管理员 | 无 |
+
+演示账号在 `application.yml` 的 `dongchedi.auth.seed-users` 中配置，
+应用启动时会先做 BCrypt 哈希再写入内存用户仓库，仓库中不保存明文密码。
+
+### 5.2 功能
+
+- **注册**：用户名 4~20 位字母 / 数字 / 下划线，密码 6~32 位且必须同时包含字母和数字；注册成功即自动登录。
+- **登录 / 退出**：基于服务端会话（`HttpSession`），Cookie 设置 `HttpOnly` + `SameSite=Lax`，30 分钟无操作自动过期。
+- **角色权限**：`USER` 管理自己的收藏；`ADMIN` 额外可访问 `/api/admin/**` 后台接口。
+- **收藏**：登录后保存到账号（服务端按用户隔离）；未登录时可临时收藏到浏览器本地，并提示登录。
+- **顶栏用户区**：显示昵称与角色、「我的收藏」入口与退出按钮。
+
+### 5.3 安全设计
+
+| 措施 | 说明 |
+| --- | --- |
+| 密码哈希 | BCrypt（`spring-security-crypto`），所有接口都不会返回 `passwordHash` |
+| 防账号枚举 | 用户名不存在时同样执行一次哈希比对，错误提示统一为「用户名或密码错误」 |
+| 防暴力破解 | 连续失败 5 次后按用户名锁定 5 分钟，可用 `dongchedi.auth.max-failed-attempts` 调整 |
+| 防会话固定 | 登录成功后销毁旧 Session 并重建，再写入登录用户 id |
+| 防越权访问 | 拦截器统一校验登录态与角色；收藏接口只使用会话中的用户 id，无法通过参数访问他人数据 |
+| 参数校验 | `@Valid` + 服务层二次校验，错误统一返回 400 与字段级说明 |
+| 错误信息隔离 | 兜底异常只写日志，对外统一返回「服务器内部错误」，不泄露实现细节 |
+
+### 5.4 说明
+
+用户与收藏数据保存在内存中，**应用重启后会重置**。
+`UserRepository`、`FavoriteRepository` 已抽象为接口，替换为 JPA / MyBatis 实现即可持久化。
+
+## 六、推荐算法说明
 
 推荐采用「内容特征匹配 + 市场热度 + 用户口碑」的加权混合模型，整体分三步：
 
@@ -101,7 +150,7 @@ curl http://localhost:8080/api/system/health
 
 结果中会返回 `reasons`（推荐理由）与 `details`（各维度得分明细），保证推荐结论可解释、可追溯。
 
-## 六、项目结构
+## 七、项目结构
 
 ```
 dongchedi
@@ -109,10 +158,13 @@ dongchedi
 ├── scripts                   # 本地与远程仓库同步校验脚本
 ├── src/main/java/com/dongchedi/car
 │   ├── controller            # CarController / RecommendController / StatisticsController / SystemController
+│   │                         # AuthController / FavoriteController / AdminController
+│   ├── config                # 认证配置（AuthProperties / AuthConfig / WebMvcConfig / 数据初始化）
 │   ├── dto                   # 请求与响应对象
 │   ├── exception             # 业务异常与全局异常处理
 │   ├── model                 # 领域模型与枚举
 │   ├── repository            # 数据访问接口与内存实现
+│   ├── security              # 登录 / 管理员拦截器
 │   ├── service               # 筛选、推荐、统计业务逻辑
 │   └── support               # 通用工具
 ├── src/main/resources
@@ -122,11 +174,11 @@ dongchedi
 └── src/test/java             # 32 个单元测试与集成测试
 ```
 
-## 七、Git 协作流程
+## 八、Git 协作流程
 
 本仓库完整走了一遍「远程仓库创建 → 克隆到本地 → 分模块开发提交 → 版本回滚 → 推送与校验」的流程。
 
-### 7.1 分支策略
+### 8.1 分支策略
 
 - `main`：可运行的主分支，只接受功能分支合并。
 - `feature/*`：每个功能模块一个分支，开发完成后用 `git merge --no-ff` 合并，保留分支合并记录。
@@ -134,9 +186,10 @@ dongchedi
   - `feature/recommend-engine`：智能推荐引擎
   - `feature/statistics-ranking`：统计与榜单
   - `feature/frontend-ui`：前端页面与联调
+  - `feature/user-auth`：用户登录系统与收藏打通
 - `practice/rollback-demo`：专门用于演示 `git reset --hard` 回滚的练习分支。
 
-### 7.2 提交规范
+### 8.2 提交规范
 
 提交信息采用 `类型: 摘要` 的约定式格式，正文用 `-` 列出要点：
 
@@ -149,7 +202,7 @@ dongchedi
 | `docs` | 文档 |
 | `merge` | 分支合并 |
 
-### 7.3 版本回滚演练
+### 8.3 版本回滚演练
 
 作业要求的「故意引入错误提交再回滚」在本仓库中真实发生过，见提交 `perf: 为车型筛选结果增加排序缓存`：
 
@@ -160,7 +213,7 @@ dongchedi
 
 完整命令与真实输出见 [docs/Git协作流程记录.md](docs/Git协作流程记录.md)。
 
-### 7.4 同步校验
+### 8.4 同步校验
 
 推送到远程仓库后，可用脚本一键校验本地与远程是否完全一致（文件、提交历史、分支结构）：
 
@@ -168,7 +221,7 @@ dongchedi
 powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 ```
 
-### 7.5 联调阶段发现并修复的真实缺陷
+### 8.5 联调阶段发现并修复的真实缺陷
 
 除了作业要求「故意引入」的错误提交，前后端联调过程中还修掉了两个真实缺陷，均通过 `fix:` 提交留痕：
 
@@ -176,8 +229,10 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 | --- | --- | --- | --- |
 | 缺失静态资源被包装成 500 | 访问不存在的静态文件返回 500 而不是 404 | 兜底 `@ExceptionHandler(Exception.class)` 拦截了 Spring 的 `NoResourceFoundException` | 单独处理 `NoResourceFoundException`，返回 404 并补充测试 |
 | 空白弹窗常驻遮挡页面 | 页面一加载就出现空白的「车型对比」弹窗和底部空浮条，挡住中间车型卡片 | 作者样式 `.modal { display: grid }`、`.compare-bar { display: flex }` 与浏览器默认的 `[hidden] { display: none }` 优先级相同但更靠后，把隐藏效果覆盖了 | 显式声明 `[hidden] { display: none !important; }`；同时给对比弹窗加「加载中 / 加载失败」提示，关闭时清空内容 |
+| 顶栏登录按钮不显示 | 未登录时右上角没有「登录 / 注册」入口 | `applyFavoritesChange()` 只在已登录分支刷新用户区 | 改为无论是否登录都渲染用户区，并在初始化时先渲染一次未登录状态 |
+| 错误请求体返回 500 | 登录接口收到非法 JSON 时提示「服务器内部错误」 | 兜底异常处理拦截了 `HttpMessageNotReadableException` | 单独处理并返回 400「请求体格式错误，请提交合法的 JSON」 |
 
-## 八、验收标准对照
+## 九、验收标准对照
 
 | 验收标准 | 完成情况 | 对应证据 |
 | --- | --- | --- |
@@ -186,7 +241,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 | （3）验证本地与远程内容完全同步（文件、分支、提交历史） | `scripts/verify-sync.ps1` 逐项比对 HEAD 哈希、文件清单、提交历史与分支列表 | `docs/验收报告.md` |
 | （4）体现从克隆、本地开发、版本控制到推送的标准协作模式 | 远程仓库创建并克隆 → 分支开发 → 提交推送 → 合并 → 校验 | `docs/Git协作流程记录.md` 全篇 |
 
-## 九、说明
+## 十、说明
 
 - 车型数据为教学演示用途整理的公开信息，价格与销量均为示例值，不代表真实市场数据。
 - 仓库中的提交作者信息为 `dongchedi-dev <dongchedi-dev@example.com>`（本机未配置全局 Git 身份时的占位值），
