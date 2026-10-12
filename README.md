@@ -78,6 +78,7 @@ curl http://localhost:8080/api/system/health
 | GET | `/api/recommend/options` | 推荐表单选项与常用预算档位 |
 | GET | `/api/statistics/overview` | 市场概览统计 |
 | GET | `/api/statistics/brand-ranking?limit=10` | 品牌销量排行榜 |
+| GET | `/api/statistics/car-ranking?limit=10&scope=ALL` | 车型销量排行榜（scope：`ALL` / `NEW_ENERGY` / `TRADITIONAL` / `PERFORMANCE`，另支持 `brand`、`bodyType` 过滤） |
 | GET | `/api/statistics/scene-distribution` | 用车场景分布 |
 | POST | `/api/auth/register` | 注册并自动登录 |
 | POST | `/api/auth/login` | 登录（写入服务端会话） |
