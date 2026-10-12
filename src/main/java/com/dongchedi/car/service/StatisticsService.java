@@ -10,6 +10,7 @@ import java.util.function.Function;
 import org.springframework.stereotype.Service;
 
 import com.dongchedi.car.dto.BrandRanking;
+import com.dongchedi.car.dto.CarRanking;
 import com.dongchedi.car.dto.CountItem;
 import com.dongchedi.car.dto.StatisticsOverview;
 import com.dongchedi.car.model.BodyType;
@@ -116,6 +117,67 @@ public class StatisticsService {
         }
         items.sort(Comparator.comparingLong(CountItem::count).reversed());
         return List.copyOf(items);
+    }
+
+    /**
+     * 车型销量排行榜。
+     *
+     * @param limit 返回条数，1~50
+     * @param scope 统计范围：ALL 全部、NEW_ENERGY 新能源、TRADITIONAL 燃油/油混
+     * @param brand 可选，限定品牌
+     * @param bodyType 可选，限定车身形式（如 SUV、SEDAN）
+     */
+    public List<CarRanking> carRankings(int limit, String scope, String brand, String bodyType) {
+        List<Car> cars = carRepository.findAll().stream()
+                .filter(car -> matchesScope(car, scope))
+                .filter(car -> brand == null || brand.isBlank() || car.brand().equals(brand.trim()))
+                .filter(car -> matchesBodyType(car, bodyType))
+                .sorted(Comparator.comparingInt(Car::monthlySales).reversed()
+                        .thenComparing(Comparator.comparingDouble(Car::userScore).reversed()))
+                .toList();
+
+        long totalSales = cars.stream().mapToLong(Car::monthlySales).sum();
+        int size = Math.max(1, Math.min(limit, 50));
+        List<CarRanking> rankings = new ArrayList<>();
+        for (int i = 0; i < Math.min(size, cars.size()); i++) {
+            Car car = cars.get(i);
+            rankings.add(new CarRanking(
+                    i + 1,
+                    car.id(),
+                    car.name(),
+                    car.brand(),
+                    car.bodyType() == null ? null : car.bodyType().name(),
+                    car.getBodyTypeLabel(),
+                    car.getEnergyTypeLabel(),
+                    car.price(),
+                    car.monthlySales(),
+                    car.userScore(),
+                    totalSales == 0 ? 0 : round((double) car.monthlySales() / totalSales)));
+        }
+        return List.copyOf(rankings);
+    }
+
+    private boolean matchesScope(Car car, String scope) {
+        if (scope == null || scope.isBlank() || "ALL".equalsIgnoreCase(scope)) {
+            return true;
+        }
+        if ("NEW_ENERGY".equalsIgnoreCase(scope)) {
+            return car.isNewEnergy();
+        }
+        if ("TRADITIONAL".equalsIgnoreCase(scope)) {
+            return !car.isNewEnergy();
+        }
+        if ("PERFORMANCE".equalsIgnoreCase(scope)) {
+            return car.isPerformanceCar();
+        }
+        return true;
+    }
+
+    private boolean matchesBodyType(Car car, String bodyType) {
+        if (bodyType == null || bodyType.isBlank()) {
+            return true;
+        }
+        return car.bodyType() != null && car.bodyType().name().equalsIgnoreCase(bodyType.trim());
     }
 
     private List<CountItem> priceDistribution(List<Car> cars) {

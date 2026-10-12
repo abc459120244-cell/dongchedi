@@ -40,7 +40,8 @@
         compare: [],
         coverSeed: 0,
         user: null,
-        authMode: 'login'
+        authMode: 'login',
+        rankingScope: 'ALL'
     };
 
     var dom = {};
@@ -180,6 +181,8 @@
         dom.authSubmitBtn = $('#authSubmitBtn');
         dom.favoriteModal = $('#favoriteModal');
         dom.favoriteContent = $('#favoriteContent');
+        dom.carRankingScope = $('#carRankingScope');
+        dom.carRankingBody = $('#carRankingTable tbody');
 
         // 先用未登录状态渲染顶栏，避免接口返回前右上角是空白
         renderUserArea();
@@ -353,6 +356,17 @@
         });
 
         // 首页「只看性能车」快捷入口：筛选零百 5 秒内的车型并按加速排序
+        dom.carRankingScope.addEventListener('click', function (event) {
+            var button = event.target.closest('button[data-scope]');
+            if (!button) {
+                return;
+            }
+            Array.prototype.forEach.call(dom.carRankingScope.querySelectorAll('button'), function (item) {
+                item.classList.toggle('is-active', item === button);
+            });
+            loadCarRanking(button.dataset.scope);
+        });
+
         $('#performanceShortcut').addEventListener('click', function () {
             state.query.scene = ['PERFORMANCE'];
             state.query.maxAcceleration = 5;
@@ -1099,6 +1113,50 @@
         }).catch(function () {
             /* 忽略局部失败 */
         });
+        loadCarRanking(state.rankingScope);
+    }
+
+    /** 车型销量榜：支持全部 / 新能源 / 燃油 / 性能车切换 */
+    function loadCarRanking(scope) {
+        state.rankingScope = scope || 'ALL';
+        dom.carRankingBody.innerHTML = '<tr><td colspan="6" class="placeholder">正在加载销量榜…</td></tr>';
+        fetchJson('/api/statistics/car-ranking?limit=10&scope=' + encodeURIComponent(state.rankingScope))
+            .then(renderCarRanking)
+            .catch(function (error) {
+                dom.carRankingBody.innerHTML = '<tr><td colspan="6" class="placeholder">加载失败：'
+                    + escapeHtml(error.message) + '</td></tr>';
+            });
+    }
+
+    function renderCarRanking(list) {
+        if (!list || !list.length) {
+            dom.carRankingBody.innerHTML = '<tr><td colspan="6" class="placeholder">该范围内暂无车型</td></tr>';
+            return;
+        }
+        var maxSales = list.reduce(function (max, item) {
+            return Math.max(max, num(item.monthlySales));
+        }, 1);
+
+        dom.carRankingBody.innerHTML = list.map(function (item) {
+            var thumbCar = {
+                id: item.carId,
+                brand: item.brand,
+                bodyType: item.bodyType,
+                bodyTypeLabel: item.bodyTypeLabel
+            };
+            return '<tr>'
+                + '<td><span class="rank-medal' + (item.rank <= 3 ? ' is-top' : '') + '">'
+                + item.rank + '</span></td>'
+                + '<td><div class="rank-car">' + carThumb(thumbCar, 'thumb--sm')
+                + '<span>' + escapeHtml(item.name) + '</span></div></td>'
+                + '<td>' + escapeHtml(item.brand) + '</td>'
+                + '<td>' + num(item.price).toFixed(2) + ' 万</td>'
+                + '<td><div>' + num(item.monthlySales).toLocaleString('zh-CN') + '</div>'
+                + '<div class="sales-bar"><span style="width:'
+                + Math.round(num(item.monthlySales) / maxSales * 100) + '%"></span></div></td>'
+                + '<td>' + (num(item.salesShare) * 100).toFixed(1) + '%</td>'
+                + '</tr>';
+        }).join('');
     }
 
     function renderOverview(overview) {
