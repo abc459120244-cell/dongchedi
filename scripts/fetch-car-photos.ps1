@@ -18,6 +18,7 @@ param(
     [int]$Width = 640,
     [int]$PerPage = 24,
     [int]$DelayMs = 200,
+    [string]$Only = '',
     [switch]$Force
 )
 
@@ -47,8 +48,8 @@ function Get-ResizedUrl([string]$ThumbUrl, [int]$Width) {
 }
 
 function Get-SearchCandidates([string]$Name, [string]$Brand, [int]$Count) {
-    # 依次尝试多种查询词，避免个别车型命中率过低
-    $queries = @($Name, ($Name -replace '\s+', ''), "$Name 实车", "$Brand 汽车")
+    # 优先用「车型 + 外观」查询（更容易命中整车外观图），其余查询词依次兜底
+    $queries = @("$Name 外观", "$Name 侧面", $Name, ($Name -replace '\s+', ''), "$Name 实车", "$Brand 汽车")
     $payload = $null
     foreach ($query in ($queries | Select-Object -Unique)) {
         $encoded = [Uri]::EscapeDataString($query)
@@ -99,8 +100,8 @@ function Get-SearchCandidates([string]$Name, [string]$Brand, [int]$Count) {
             if ($title.ToUpperInvariant().Contains($token)) { $hitTokens++ }
         }
         $score += [Math]::Min($hitTokens, 3)
-        if ($title -match $exteriorPattern) { $score += 3 }
-        if ($title -match $interiorPattern) { $score -= 6 }
+        if ($title -match $exteriorPattern) { $score += 4 }
+        if ($title -match $interiorPattern) { $score -= 10 }
         if ($score -eq 0) { $score = 1 }         # 名称为中文时标题往往不含型号串，保留为候选
         $scored += [pscustomobject]@{
             Item  = $item
@@ -114,6 +115,11 @@ function Get-SearchCandidates([string]$Name, [string]$Brand, [int]$Count) {
 }
 
 $cars = Get-Content -Raw -Encoding UTF8 $DataFile | ConvertFrom-Json
+# 指定 -Only 时只处理列出的车型 id（例如 -Only 5,21,58），便于替换个别不合适的照片
+$onlyIds = @()
+if (-not [string]::IsNullOrWhiteSpace($Only)) {
+    $onlyIds = $Only.Split(',') | ForEach-Object { [long]$_.Trim() }
+}
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
 $creditsPath = Join-Path $OutDir 'photos-credits.json'
@@ -134,6 +140,9 @@ $failed = @()
 Write-Host "共 $($cars.Count) 款车型，开始抓取照片（宽度 $Width px）…" -ForegroundColor Cyan
 
 foreach ($car in $cars) {
+    if ($onlyIds.Count -gt 0 -and ($onlyIds -notcontains [long]$car.id)) {
+        continue
+    }
     $target = Join-Path $OutDir "$($car.id).jpg"
     if ((Test-Path $target) -and -not $Force) {
         $skipped++
