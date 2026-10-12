@@ -984,6 +984,76 @@ select:focus {
     margin-top: 24px;
 }
 
+.panel--ranking {
+    margin-bottom: 20px;
+}
+
+.panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.panel__head .panel__title {
+    margin-bottom: 0;
+}
+
+.segmented {
+    display: flex;
+    gap: 4px;
+    background: #f4f5f7;
+    border-radius: 999px;
+    padding: 3px;
+}
+
+.segmented button {
+    border: 0;
+    background: transparent;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #4a4d55;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.segmented button:hover {
+    color: var(--brand);
+}
+
+.segmented button.is-active {
+    background: #fff;
+    color: var(--brand-dark);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+}
+
+.rank-car {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sales-bar {
+    margin-top: 5px;
+    height: 6px;
+    width: 120px;
+    border-radius: 999px;
+    background: #f1f2f5;
+    overflow: hidden;
+}
+
+.sales-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--brand), #ffa06a);
+}
+
 .table {
     width: 100%;
     border-collapse: collapse;
