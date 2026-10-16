@@ -5,8 +5,9 @@
 
 ## 一、项目简介
 
-「车帝选车」是一个前后端一体的汽车选车系统，用户既能像逛懂车帝一样按条件筛选车型，
-也可以填写预算与用车需求，让系统给出**可解释的推荐结果**（推荐理由 + 各维度得分明细）。
+「车帝选车」是一个前后端一体、**多端协作**的汽车选车平台：买家端可以像逛懂车帝一样筛选车型、
+得到可解释的推荐结果并在线预约；商家端可以管理自己的车源、处理买家订单；
+所有数据都持久化在**数据库**中，买家下单后商家端通过 **SSE 实时收到订单消息**。
 
 系统内置 63 款、覆盖 33 个品牌的主流车型数据（含 20 款性能车），开箱即可运行，**不依赖任何外部数据库**。
 
@@ -20,6 +21,9 @@
 - **市场榜单**：品牌销量排行、能源类型分布、价格区间分布、用车场景分布。
 - **用户系统**：注册 / 登录 / 退出、基于服务端会话的登录态、普通用户与管理员两种角色。
 - **收藏**：登录后收藏保存到账号（按用户隔离），未登录时临时保存在浏览器本地。
+- **商家端（多端）**：独立入口 `/merchant.html`，支持车源新增 / 修改 / 上下架 / 删除，以及订单的确认、拒绝、完成。
+- **实时消息（SSE）**：买家提交预约试驾 / 询价后，对应商家端**无需刷新**即收到提醒；商家处理订单后买家同样实时收到状态变更。
+- **数据库持久化**：车型、用户、收藏、订单、消息全部落库（默认 H2 文件数据库，可一键切换 MySQL）。
 
 ## 二、技术栈
 
@@ -30,7 +34,8 @@
 | Web / 参数校验 | Spring MVC、Validation（Jakarta Bean Validation） |
 | 序列化 | Jackson |
 | 认证与密码 | `spring-security-crypto`（BCrypt）+ Session 登录拦截器 |
-| 数据层 | JSON 种子数据集 + 内存仓库（`CarRepository` 接口可平滑替换为 JPA / MyBatis 实现） |
+| 数据层 | Spring Data JPA + Hibernate，默认 H2 文件数据库（`./data/dongchedi.mv.db`），部署时切换 MySQL 8 |
+| 实时通信 | Server-Sent Events（SSE），买家与商家双向推送订单与消息 |
 | 前端 | 原生 HTML / CSS / JavaScript（无第三方依赖） |
 | 测试 | JUnit 5 + AssertJ + MockMvc（52 个测试用例） |
 
@@ -49,6 +54,13 @@ java -jar target/dongchedi.jar
 
 启动成功后访问 <http://localhost:8080>。
 
+首次启动会自动建表，并把 `src/main/resources/data/cars.json` 里的 63 款车型导入数据库
+（控制台会打印 `DataSeeder` 的导入日志），同时创建演示账号。
+
+- 买家端：<http://localhost:8080/>（或 `/index.html`）
+- 商家端：<http://localhost:8080/merchant.html>
+- 数据库控制台（仅开发环境）：<http://localhost:8080/h2-console>，JDBC URL `jdbc:h2:file:./data/dongchedi`，用户名 `sa`，密码为空
+
 > 若 8080 端口已被占用，可指定其他端口：`java -jar target/dongchedi.jar --server.port=18080`，
 > 或者在 `src/main/resources/application.yml` 中修改 `server.port`。
 
@@ -63,6 +75,18 @@ mvn test
 ```bash
 curl http://localhost:8080/api/system/health
 ```
+
+### 4. 切换 MySQL / 部署到服务器
+
+```bash
+# 本地用 MySQL 运行
+java -jar target/dongchedi.jar --spring.profiles.active=mysql \
+  --DB_HOST=localhost --DB_NAME=dongchedi --DB_USER=root --DB_PASSWORD=你的密码
+```
+
+部署到云服务器（含 MySQL + Nginx + 外网访问）请参考 [docs/部署指南.md](docs/部署指南.md)，
+仓库内已提供 `deploy/Dockerfile`、`deploy/docker-compose.yml`、`deploy/nginx.conf`、
+`deploy/dongchedi.service` 与一键脚本 `deploy/deploy-ubuntu.sh`。
 
 ## 四、接口清单
 
@@ -90,6 +114,18 @@ curl http://localhost:8080/api/system/health
 | DELETE | `/api/favorites/{carId}` | 取消收藏（需登录） |
 | DELETE | `/api/favorites` | 清空收藏（需登录） |
 | GET | `/api/admin/users` | 用户列表（需管理员角色） |
+| POST | `/api/orders` | 买家提交预约试驾 / 询价 / 意向定金（需登录） |
+| GET | `/api/orders/mine` | 我的订单（需登录） |
+| GET | `/api/notifications` | 我的站内消息（需登录） |
+| GET | `/api/notifications/unread-count` | 未读消息数（需登录） |
+| POST | `/api/notifications/{id}/read`、`/read-all` | 标记已读（需登录） |
+| GET | `/api/notifications/stream` | **SSE 实时消息通道**（订单、状态变更实时推送） |
+| GET | `/api/merchant/summary` | 商家经营概览（需商家角色） |
+| GET / POST | `/api/merchant/cars` | 我的车源列表 / 新增车源 |
+| PUT / DELETE | `/api/merchant/cars/{id}` | 修改 / 删除车源 |
+| POST | `/api/merchant/cars/{id}/status` | 上架 / 下架车源 |
+| GET | `/api/merchant/orders` | 收到的订单（可按状态过滤） |
+| POST | `/api/merchant/orders/{id}/status` | 处理订单（确认 / 拒绝 / 完成） |
 
 更多参数与返回示例见 [docs/接口说明.md](docs/接口说明.md)。
 
@@ -101,6 +137,9 @@ curl http://localhost:8080/api/system/health
 | --- | --- | --- | --- |
 | `demo` | `demo123` | 普通用户 | 3 款（秦PLUS DM-i、Model Y、理想 L7） |
 | `admin` | `admin123` | 管理员 | 无 |
+| `dealer_byd` | `dealer123` | 商家（比亚迪 / 仰望 / 方程豹 / 腾势，8 款车源） | 无 |
+| `dealer_ev` | `dealer123` | 商家（特斯拉 / 蔚来 / 小鹏 / 理想 / 小米 / 极氪 / 问界 / 零跑 / 智己） | 无 |
+| `dealer_intl` | `dealer123` | 商家（大众 / 丰田 / 本田 / 宝马 / 奔驰 / 奥迪 / 保时捷等 20 个品牌） | 无 |
 
 演示账号在 `application.yml` 的 `dongchedi.auth.seed-users` 中配置，
 应用启动时会先做 BCrypt 哈希再写入内存用户仓库，仓库中不保存明文密码。
@@ -109,7 +148,7 @@ curl http://localhost:8080/api/system/health
 
 - **注册**：用户名 4~20 位字母 / 数字 / 下划线，密码 6~32 位且必须同时包含字母和数字；注册成功即自动登录。
 - **登录 / 退出**：基于服务端会话（`HttpSession`），Cookie 设置 `HttpOnly` + `SameSite=Lax`，30 分钟无操作自动过期。
-- **角色权限**：`USER` 管理自己的收藏；`ADMIN` 额外可访问 `/api/admin/**` 后台接口。
+- **角色权限**：`USER` 管理自己的收藏与订单；`MERCHANT` 管理自己名下的车源与订单；`ADMIN` 可管理全部车源并访问 `/api/admin/**`。
 - **收藏**：登录后保存到账号（服务端按用户隔离）；未登录时可临时收藏到浏览器本地，并提示登录。
 - **顶栏用户区**：显示昵称与角色、「我的收藏」入口与退出按钮。
 
@@ -121,16 +160,68 @@ curl http://localhost:8080/api/system/health
 | 防账号枚举 | 用户名不存在时同样执行一次哈希比对，错误提示统一为「用户名或密码错误」 |
 | 防暴力破解 | 连续失败 5 次后按用户名锁定 5 分钟，可用 `dongchedi.auth.max-failed-attempts` 调整 |
 | 防会话固定 | 登录成功后销毁旧 Session 并重建，再写入登录用户 id |
-| 防越权访问 | 拦截器统一校验登录态与角色；收藏接口只使用会话中的用户 id，无法通过参数访问他人数据 |
+| 防越权访问 | 拦截器统一校验登录态与角色；收藏与订单只使用会话中的用户 id，无法通过参数访问他人数据 |
 | 参数校验 | `@Valid` + 服务层二次校验，错误统一返回 400 与字段级说明 |
 | 错误信息隔离 | 兜底异常只写日志，对外统一返回「服务器内部错误」，不泄露实现细节 |
 
 ### 5.4 说明
 
-用户与收藏数据保存在内存中，**应用重启后会重置**。
-`UserRepository`、`FavoriteRepository` 已抽象为接口，替换为 JPA / MyBatis 实现即可持久化。
+用户、收藏、订单、消息全部保存在数据库中（默认 H2 文件数据库，部署时切换 MySQL），
+**重启应用数据不会丢失**；需要清空演示数据时删除 `data/` 目录即可。
 
-## 六、推荐算法说明
+## 六、多端互动与数据库设计
+
+### 6.1 多端形态
+
+| 端 | 入口 | 主要能力 |
+| --- | --- | --- |
+| 买家端 | `/index.html` | 多条件筛选、智能推荐、车型对比、收藏、**预约试驾 / 询价**、我的订单与消息 |
+| 商家端 | `/merchant.html` | 经营概览、**车源增删改与上下架**、**订单处理**、站内消息 |
+| 管理视角 | 复用商家端（用 `admin` 登录） | 查看全部车源与全部订单 |
+
+两套界面共用同一个后端服务与数据库，PC 与手机浏览器都做了响应式适配。
+
+### 6.2 互动闭环（对应验收标准「买家下单，卖家收到订单消息」）
+
+```
+买家点击「预约」→ POST /api/orders            订单写入 car_order 表（状态 PENDING）
+                     ↓ 同时
+               notification 表写入商家消息 + SSE 推送给商家端
+                     ↓
+商家端订单列表自动刷新 + 顶部弹出「收到新的订单」
+                     ↓
+商家点击「处理」→ POST /api/merchant/orders/{id}/status
+                     ↓ 更新订单状态并写商家回复
+               notification 表写入买家消息 + SSE 推送给买家端
+                     ↓
+买家端实时收到「订单状态更新：已确认」
+```
+
+即使商家端当时没有打开页面，消息也已经落库，下次打开商家端即可在「消息」里看到未读记录。
+
+### 6.3 数据库表结构
+
+| 表 | 说明 | 关键字段 |
+| --- | --- | --- |
+| `car` | 车型 / 车源 | `id`、`name`、`brand`、`price`、`monthly_sales`、`dealer_id`（车源归属商家）、`status`（在售 / 已下架） |
+| `user_account` | 用户 | `id`、`username`（唯一）、`role`（USER / MERCHANT / ADMIN）、`password_hash`（BCrypt） |
+| `favorite` | 收藏 | `user_id` + `car_id` 唯一约束 |
+| `car_order` | 订单 | `id`、`car_id`、`dealer_id`、`buyer_id`、`contact_phone`、`status`、`dealer_reply` |
+| `notification` | 站内消息 | `id`、`user_id`、`type`、`title`、`content`、`read_flag` |
+
+查看数据库内容：
+
+```bash
+# MySQL（Docker 部署时）
+docker compose -f deploy/docker-compose.yml exec mysql \
+  mysql -uroot -pdongchedi123 dongchedi -e "select id,name,brand,price,status from car limit 5;"
+docker compose -f deploy/docker-compose.yml exec mysql \
+  mysql -uroot -pdongchedi123 dongchedi -e "select id,car_name,buyer_name,status from car_order;"
+
+# 本地 H2 文件数据库：直接打开 /h2-console 即可（见快速开始）
+```
+
+## 七、推荐算法说明
 
 推荐采用「内容特征匹配 + 市场热度 + 用户口碑」的加权混合模型，整体分三步：
 
@@ -152,35 +243,39 @@ curl http://localhost:8080/api/system/health
 
 结果中会返回 `reasons`（推荐理由）与 `details`（各维度得分明细），保证推荐结论可解释、可追溯。
 
-## 七、项目结构
+## 八、项目结构
 
 ```
 dongchedi
-├── docs                      # 文档：Git 协作流程记录、接口说明、验收报告
+├── deploy                    # 部署产物：Dockerfile、docker-compose、Nginx、systemd、一键脚本
+├── docs                      # 文档：部署指南、团队协作指南、接口说明、Git 流程记录、验收报告
 ├── scripts                   # 仓库同步校验脚本、真实车型照片抓取脚本
 ├── src/main/java/com/dongchedi/car
 │   ├── controller            # CarController / RecommendController / StatisticsController / SystemController
-│   │                         # AuthController / FavoriteController / AdminController
+│   │                         # AuthController / FavoriteController / OrderController
+│   │                         # NotificationController（SSE）/ MerchantController / AdminController
 │   ├── config                # 认证配置（AuthProperties / AuthConfig / WebMvcConfig / 数据初始化）
 │   ├── dto                   # 请求与响应对象
+│   ├── entity                # JPA 实体：CarEntity / UserEntity / FavoriteEntity / OrderEntity / NotificationEntity
 │   ├── exception             # 业务异常与全局异常处理
 │   ├── model                 # 领域模型与枚举
-│   ├── repository            # 数据访问接口与内存实现
-│   ├── security              # 登录 / 管理员拦截器
-│   ├── service               # 筛选、推荐、统计业务逻辑
+│   ├── repository            # 数据访问接口 + JPA 实现（jpa 子包为 Spring Data 仓库）
+│   ├── security              # 登录 / 商家 / 管理员拦截器
+│   ├── service               # 筛选、推荐、统计、订单、消息与实时推送
 │   └── support               # 通用工具
 ├── src/main/resources
-│   ├── application.yml
+│   ├── application.yml       # 默认 H2 文件数据库
+│   ├── application-mysql.yml # MySQL 配置（部署时使用）
 │   ├── data/cars.json        # 63 款车型种子数据（含 20 款零百 5 秒内的性能车）
-│   └── static                # 前端页面（index.html / css / js）
-└── src/test/java             # 52 个单元测试与集成测试
+│   └── static                # 前端页面：买家端 index.html、商家端 merchant.html
+└── src/test/java             # 58 个单元测试与集成测试（含多端互动流程测试）
 ```
 
-## 八、Git 协作流程
+## 九、Git 协作流程
 
 本仓库完整走了一遍「远程仓库创建 → 克隆到本地 → 分模块开发提交 → 版本回滚 → 推送与校验」的流程。
 
-### 8.1 分支策略
+### 9.1 分支策略
 
 - `main`：可运行的主分支，只接受功能分支合并。
 - `feature/*`：每个功能模块一个分支，开发完成后用 `git merge --no-ff` 合并，保留分支合并记录。
@@ -192,7 +287,7 @@ dongchedi
   - `feature/richer-cars`：车型库扩充与性能车维度
 - `practice/rollback-demo`：专门用于演示 `git reset --hard` 回滚的练习分支。
 
-### 8.2 提交规范
+### 9.2 提交规范
 
 提交信息采用 `类型: 摘要` 的约定式格式，正文用 `-` 列出要点：
 
@@ -205,7 +300,7 @@ dongchedi
 | `docs` | 文档 |
 | `merge` | 分支合并 |
 
-### 8.3 版本回滚演练
+### 9.3 版本回滚演练
 
 作业要求的「故意引入错误提交再回滚」在本仓库中真实发生过，见提交 `perf: 为车型筛选结果增加排序缓存`：
 
@@ -216,7 +311,7 @@ dongchedi
 
 完整命令与真实输出见 [docs/Git协作流程记录.md](docs/Git协作流程记录.md)。
 
-### 8.4 同步校验
+### 9.4 同步校验
 
 推送到远程仓库后，可用脚本一键校验本地与远程是否完全一致（文件、提交历史、分支结构）：
 
@@ -224,7 +319,7 @@ dongchedi
 powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 ```
 
-### 8.5 联调阶段发现并修复的真实缺陷
+### 9.5 联调阶段发现并修复的真实缺陷
 
 除了作业要求「故意引入」的错误提交，前后端联调过程中还修掉了两个真实缺陷，均通过 `fix:` 提交留痕：
 
@@ -236,16 +331,36 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 | 错误请求体返回 500 | 登录接口收到非法 JSON 时提示「服务器内部错误」 | 兜底异常处理拦截了 `HttpMessageNotReadableException` | 单独处理并返回 400「请求体格式错误，请提交合法的 JSON」 |
 | 中窄窗口顶栏换行 | 窗口宽度约 850px 时导航与「登录 / 注册」被挤成两行 | 搜索框固定 `min-width: 320px`，加上用户区后总宽超出容器 | 新增 1100px 断点收紧间距、让搜索框可伸缩，并给按钮加 `white-space: nowrap` |
 
-## 九、验收标准对照
+## 十、验收标准对照
+
+### 10.1 课程项目要求（前后端数据库 / 多端 / 部署）
+
+| 老师要求 | 完成情况 | 证据 / 验证方式 |
+| --- | --- | --- |
+| （1）前后端 + 数据库 | ✅ Spring Boot 后端 + JPA/Hibernate 持久化，5 张业务表（`car` / `user_account` / `favorite` / `car_order` / `notification`）；默认 H2 文件库，部署切 MySQL | 商家端新增/改价/下架/删除车源，买家端列表实时变化；`docker compose exec mysql mysql -e "select ... from car"` 可查库 |
+| （2）多端系统项目 | ✅ 买家端 `/index.html` + 商家端 `/merchant.html` + 管理视角，共用后端与数据库 | 两个入口分别登录 `demo` 与 `dealer_byd` |
+| （3）每人都有提交记录 | ✅ 已提供分工表与标准流程，见 [docs/团队协作与提交指南.md](docs/团队协作与提交指南.md) | 每位成员按指南完成自己的分支与提交，`git shortlog -sne` 可统计 |
+| （4）部署到服务器 | ✅ 提供 Dockerfile / docker-compose（MySQL+Nginx）/ systemd / 一键脚本与完整文档 | [docs/部署指南.md](docs/部署指南.md) |
+
+### 10.2 验收标准
+
+| 验收标准 | 完成情况 | 验证方式 |
+| --- | --- | --- |
+| （1）前端增删改数据 → 后端业务处理 → 数据库变化 | ✅ 商家端新增 / 修改 / 上下架 / 删除车源直接写 `car` 表；买家端下单写 `car_order` 表 | 操作后查询数据库，或重启应用后数据仍在 |
+| （2）多端互动（买家下单，卖家收到订单消息） | ✅ 买家提交预约试驾 → 订单落库并归属车源商家 → 商家端 SSE **无需刷新**收到提醒；商家处理后买家同样实时收到消息 | 商家端与买家端各开一个浏览器（或手机+电脑）演示 |
+| （3）远程仓库有每个人的提交记录 | ✅ 已给出分工与提交规范；主线提交历史、分支结构、合并记录完整 | GitHub/Gitee 仓库的 Contributors 与提交历史 |
+| （4）项目可通过不同网络访问 | ✅ 提供服务器部署方案（Docker Compose + Nginx），并给出内网穿透备选 | 手机流量访问服务器公网地址 |
+
+### 10.3 与原 Git 作业要求对照（同一仓库，兼顾两门作业）
 
 | 验收标准 | 完成情况 | 对应证据 |
 | --- | --- | --- |
-| （1）远程仓库包含完整项目文件与清晰提交历史，至少 3 次有意义的提交 | main 分支 13 个提交，其中功能提交 5 个、合并提交 4 个 | 见 Git 协作流程记录中的提交清单 |
-| （2）本地展示完整版本控制流程：初始提交、功能开发提交、版本回滚 | 初始提交 `Initial commit`；4 个功能分支开发提交；`git revert` 与 `git reset --hard` 两种回滚演练 | `docs/Git协作流程记录.md` |
-| （3）验证本地与远程内容完全同步（文件、分支、提交历史） | `scripts/verify-sync.ps1` 逐项比对 HEAD 哈希、文件清单、提交历史与分支列表 | `docs/验收报告.md` |
-| （4）体现从克隆、本地开发、版本控制到推送的标准协作模式 | 远程仓库创建并克隆 → 分支开发 → 提交推送 → 合并 → 校验 | `docs/Git协作流程记录.md` 全篇 |
+| 远程仓库包含完整项目文件与清晰提交历史 | main 分支包含全部功能提交与合并记录 | `docs/Git协作流程记录.md` |
+| 本地展示完整版本控制流程：初始提交、功能开发提交、版本回滚 | 初始提交 + 多个功能分支提交 + `git revert` 与 `git reset --hard` 两种回滚演练 | `docs/Git协作流程记录.md` |
+| 验证本地与远程内容完全同步 | `scripts/verify-sync.ps1` 逐项比对哈希、文件清单、提交历史与分支 | `docs/验收报告.md` |
+| 体现克隆 → 本地开发 → 版本控制 → 推送的协作模式 | 远程仓库创建并克隆 → 分支开发 → 提交推送 → 合并 → 校验 | `docs/Git协作流程记录.md` 全篇 |
 
-## 十、说明
+## 十一、说明
 
 - 车型数据为教学演示用途整理的公开信息，价格与销量均为示例值，不代表真实市场数据。
 - **车型配图分两层**：

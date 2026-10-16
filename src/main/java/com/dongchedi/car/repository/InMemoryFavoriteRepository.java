@@ -7,12 +7,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.stereotype.Repository;
 
 /**
  * 内存收藏仓库，重启后重置，接口设计可直接替换为数据库实现。
  */
-@Repository
 public class InMemoryFavoriteRepository implements FavoriteRepository {
 
     private final Map<Long, Set<Long>> favoritesByUser = new ConcurrentHashMap<>();

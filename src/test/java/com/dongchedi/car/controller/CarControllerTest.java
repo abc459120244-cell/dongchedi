@@ -10,12 +10,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * 车型接口集成测试，走完整的 Spring MVC + 服务层链路。
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 class CarControllerTest {
 

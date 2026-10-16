@@ -41,7 +41,10 @@
         coverSeed: 0,
         user: null,
         authMode: 'login',
-        rankingScope: 'ALL'
+        rankingScope: 'ALL',
+        orderCar: null,
+        unread: 0,
+        stream: null
     };
 
     var dom = {};
@@ -183,6 +186,16 @@
         dom.favoriteContent = $('#favoriteContent');
         dom.carRankingScope = $('#carRankingScope');
         dom.carRankingBody = $('#carRankingTable tbody');
+        dom.orderCreateModal = $('#orderCreateModal');
+        dom.orderCarInfo = $('#orderCarInfo');
+        dom.orderTypeSelect = $('#orderTypeSelect');
+        dom.orderContactName = $('#orderContactName');
+        dom.orderContactPhone = $('#orderContactPhone');
+        dom.orderRemark = $('#orderRemark');
+        dom.orderError = $('#orderError');
+        dom.orderSubmitBtn = $('#orderSubmitBtn');
+        dom.myOrderModal = $('#myOrderModal');
+        dom.myOrderContent = $('#myOrderContent');
 
         // 先用未登录状态渲染顶栏，避免接口返回前右上角是空白
         renderUserArea();
@@ -245,6 +258,23 @@
             var compareBtn = event.target.closest('[data-action="compare"]');
             if (compareBtn) {
                 toggleCompare(Number(compareBtn.dataset.id));
+                return;
+            }
+            var orderBtn = event.target.closest('[data-action="order"]');
+            if (orderBtn) {
+                requestOrder(Number(orderBtn.dataset.id));
+            }
+        });
+
+        dom.orderCreateModal.addEventListener('click', function (event) {
+            if (event.target.closest('[data-order-create-close]')) {
+                closeOrderModal();
+            }
+        });
+        dom.orderSubmitBtn.addEventListener('click', submitOrder);
+        dom.myOrderModal.addEventListener('click', function (event) {
+            if (event.target.closest('[data-my-order-close]')) {
+                dom.myOrderModal.hidden = true;
             }
         });
 
@@ -328,6 +358,8 @@
                 logout();
             } else if (action.dataset.userAction === 'favorites') {
                 openFavoriteModal();
+            } else if (action.dataset.userAction === 'orders') {
+                openMyOrders();
             }
         });
 
@@ -637,6 +669,7 @@
             + '<span class="card-actions">'
             + '<button type="button" class="icon-btn' + (favorite ? ' is-active' : '')
             + '" data-action="favorite" data-id="' + car.id + '">' + (favorite ? '已收藏' : '收藏') + '</button>'
+            + '<button type="button" class="icon-btn" data-action="order" data-id="' + car.id + '">预约</button>'
             + '<button type="button" class="icon-btn' + (compared ? ' is-active' : '')
             + '" data-action="compare" data-id="' + car.id + '">' + (compared ? '已选对比' : '对比') + '</button>'
             + '</span></div></div></article>';
@@ -735,6 +768,8 @@
             state.favorites = new Set(ids);
             applyFavoritesChange();
             renderCars(state.lastPage);
+            loadUnread();
+            connectStream();
         });
     }
 
@@ -761,6 +796,8 @@
             + '</span>'
             + '<button type="button" class="icon-btn" data-user-action="favorites">我的收藏 (<em>'
             + state.favorites.size + '</em>)</button>'
+            + '<button type="button" class="icon-btn" data-user-action="orders">我的订单'
+            + (state.unread > 0 ? ' <em>' + state.unread + '</em>' : '') + '</button>'
             + '<button type="button" class="icon-btn" data-user-action="logout">退出</button>';
     }
 
@@ -826,6 +863,11 @@
     function logout() {
         fetchJson('/api/auth/logout', {method: 'POST'}).then(function () {
             state.user = null;
+            state.unread = 0;
+            if (state.stream) {
+                state.stream.close();
+                state.stream = null;
+            }
             state.favorites = new Set(loadFavorites());
             applyFavoritesChange();
             renderCars(state.lastPage);
@@ -878,6 +920,140 @@
     function closeFavoriteModal() {
         dom.favoriteModal.hidden = true;
         dom.favoriteContent.innerHTML = '';
+    }
+
+    /* ----------------------------- 下单与我的订单 ----------------------------- */
+
+    function requestOrder(carId) {
+        var car = findCar(carId);
+        if (!state.user) {
+            openAuthModal('login', '预约试驾 / 询价需要登录：登录后提交的订单会实时推送给对应商家。');
+            return;
+        }
+        if (!car) {
+            return;
+        }
+        state.orderCar = car;
+        dom.orderCarInfo.textContent = car.name + ' · ' + num(car.price).toFixed(2) + ' 万 · '
+            + car.brand + ' · ' + car.energyTypeLabel;
+        dom.orderContactName.value = state.user.displayName || state.user.username;
+        dom.orderContactPhone.value = '';
+        dom.orderRemark.value = '';
+        dom.orderError.hidden = true;
+        dom.orderCreateModal.hidden = false;
+    }
+
+    function closeOrderModal() {
+        dom.orderCreateModal.hidden = true;
+        state.orderCar = null;
+    }
+
+    function submitOrder() {
+        if (!state.orderCar) {
+            return;
+        }
+        var payload = {
+            carId: state.orderCar.id,
+            type: dom.orderTypeSelect.value,
+            contactName: dom.orderContactName.value.trim(),
+            contactPhone: dom.orderContactPhone.value.trim(),
+            remark: dom.orderRemark.value.trim()
+        };
+        dom.orderSubmitBtn.disabled = true;
+        dom.orderError.hidden = true;
+        fetchJson('/api/orders', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).then(function (order) {
+            closeOrderModal();
+            toast('已提交「' + order.typeLabel + '」，商家「' + (order.dealerName || '平台自营')
+                + '」已收到实时提醒', 'success');
+        }).catch(function (error) {
+            dom.orderError.textContent = error.message;
+            dom.orderError.hidden = false;
+        }).finally(function () {
+            dom.orderSubmitBtn.disabled = false;
+        });
+    }
+
+    function openMyOrders() {
+        dom.myOrderModal.hidden = false;
+        dom.myOrderContent.innerHTML = '<p class="placeholder">正在加载订单…</p>';
+        fetchJson('/api/orders/mine').then(function (orders) {
+            if (!orders.length) {
+                dom.myOrderContent.innerHTML = '<p class="placeholder">还没有订单，去车型卡片点「预约」试试。</p>';
+                return null;
+            }
+            dom.myOrderContent.innerHTML = '<div class="message-list">' + orders.map(function (order) {
+                return '<div class="message-item">'
+                    + '<div class="message-item__title"><span>#' + order.id + ' '
+                    + escapeHtml(order.carName) + '</span>'
+                    + '<span class="tag ' + orderStatusClass(order.status) + '">'
+                    + escapeHtml(order.statusLabel) + '</span></div>'
+                    + '<div class="message-item__body">' + escapeHtml(order.typeLabel)
+                    + ' · 商家：' + escapeHtml(order.dealerName)
+                    + ' · 提交时间 ' + escapeHtml((order.createdAt || '').replace('T', ' ').substring(0, 16))
+                    + (order.dealerReply ? '<br>商家回复：' + escapeHtml(order.dealerReply) : '')
+                    + '</div></div>';
+            }).join('') + '</div>';
+            return fetchJson('/api/notifications/read-all', {method: 'POST'});
+        }).then(function () {
+            loadUnread();
+        }).catch(function (error) {
+            dom.myOrderContent.innerHTML = '<p class="placeholder">加载失败：'
+                + escapeHtml(error.message) + '</p>';
+        });
+    }
+
+    function orderStatusClass(status) {
+        if (status === 'PENDING') {
+            return 'tag--warn';
+        }
+        if (status === 'CONFIRMED') {
+            return 'tag--ok';
+        }
+        if (status === 'REJECTED') {
+            return 'tag--off';
+        }
+        return 'tag--done';
+    }
+
+    function loadUnread() {
+        if (!state.user) {
+            state.unread = 0;
+            return Promise.resolve();
+        }
+        return fetchJson('/api/notifications/unread-count').then(function (result) {
+            state.unread = result.unread || 0;
+            renderUserArea();
+        }).catch(function () {
+            /* 忽略 */
+        });
+    }
+
+    /** 买家端也订阅 SSE：商家处理订单后可以实时收到状态变化 */
+    function connectStream() {
+        if (state.stream || !window.EventSource) {
+            return;
+        }
+        var stream = new EventSource('/api/notifications/stream');
+        stream.addEventListener('order', function (event) {
+            var order = JSON.parse(event.data);
+            toast('订单 #' + order.id + ' 状态更新：' + order.statusLabel
+                + (order.dealerReply ? '（商家回复：' + order.dealerReply + '）' : ''), 'success');
+            loadUnread();
+            if (!dom.myOrderModal.hidden) {
+                openMyOrders();
+            }
+        });
+        stream.addEventListener('notification', function () {
+            loadUnread();
+        });
+        stream.onerror = function () {
+            /* 断线后浏览器会自动重连 */
+        };
+        state.stream = stream;
     }
 
     function findCar(id) {
