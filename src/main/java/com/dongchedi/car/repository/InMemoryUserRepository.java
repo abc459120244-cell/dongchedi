@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Repository;
 
 import com.dongchedi.car.exception.BizException;
 import com.dongchedi.car.model.UserAccount;
@@ -22,7 +21,6 @@ import com.dongchedi.car.model.UserRole;
  * <p>演示项目不依赖数据库，用户数据保存在内存中（重启后重置）；
  * 保留 {@link UserRepository} 接口，便于后续替换为 JPA / MyBatis 实现。
  */
-@Repository
 public class InMemoryUserRepository implements UserRepository {
 
     private final Map<Long, UserAccount> usersById = new ConcurrentHashMap<>();

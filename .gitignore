@@ -34,6 +34,11 @@ logs/
 # 需要本地展示真实车图时执行：powershell -ExecutionPolicy Bypass -File scripts/fetch-car-photos.ps1
 src/main/resources/static/img/cars/photos/
 
+# ---- 本地数据库文件（H2 文件模式）----
+data/
+*.mv.db
+*.trace.db
+
 # ---- Env / Secret ----
 .env
 .env.*

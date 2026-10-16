@@ -6,6 +6,7 @@ package com.dongchedi.car.model;
 public enum UserRole {
 
     USER("普通用户"),
+    MERCHANT("商家"),
     ADMIN("管理员");
 
     private final String label;

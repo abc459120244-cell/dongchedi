@@ -14,6 +14,21 @@ server:
 spring:
   application:
     name: dongchedi
+  # 默认使用 H2 文件数据库：无需安装数据库即可运行，数据保存在 ./data/dongchedi.mv.db
+  # 部署到服务器时用 MySQL：--spring.profiles.active=mysql
+  datasource:
+    url: jdbc:h2:file:./data/dongchedi;MODE=MySQL;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   jackson:
     default-property-inclusion: non_null
     serialization:
@@ -49,6 +64,19 @@ dongchedi:
         password: admin123
         nickname: 系统管理员
         role: ADMIN
+      # 商家账号：登录商家端 /merchant.html 可以管理车源与订单
+      - username: dealer_byd
+        password: dealer123
+        nickname: 比亚迪新能源旗舰店
+        role: MERCHANT
+      - username: dealer_ev
+        password: dealer123
+        nickname: 新势力体验中心
+        role: MERCHANT
+      - username: dealer_intl
+        password: dealer123
+        nickname: 德系日系联合展厅
+        role: MERCHANT
 
 logging:
   level:

@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.stereotype.Repository;
 
 import com.dongchedi.car.model.Car;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -23,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * 基于 JSON 数据集的内存实现，应用启动时一次性加载，避免依赖外部数据库即可运行。
  */
-@Repository
 public class InMemoryCarRepository implements CarRepository {
 
     private static final Logger log = LoggerFactory.getLogger(InMemoryCarRepository.class);

@@ -6,6 +6,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import com.dongchedi.car.security.AdminRequiredInterceptor;
 import com.dongchedi.car.security.LoginRequiredInterceptor;
+import com.dongchedi.car.security.MerchantRequiredInterceptor;
 
 /**
  * 注册登录 / 管理员拦截器。
@@ -18,18 +19,24 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final LoginRequiredInterceptor loginRequiredInterceptor;
     private final AdminRequiredInterceptor adminRequiredInterceptor;
+    private final MerchantRequiredInterceptor merchantRequiredInterceptor;
 
     public WebMvcConfig(LoginRequiredInterceptor loginRequiredInterceptor,
-                        AdminRequiredInterceptor adminRequiredInterceptor) {
+                        AdminRequiredInterceptor adminRequiredInterceptor,
+                        MerchantRequiredInterceptor merchantRequiredInterceptor) {
         this.loginRequiredInterceptor = loginRequiredInterceptor;
         this.adminRequiredInterceptor = adminRequiredInterceptor;
+        this.merchantRequiredInterceptor = merchantRequiredInterceptor;
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(loginRequiredInterceptor)
-                .addPathPatterns("/api/favorites/**", "/api/admin/**");
+                .addPathPatterns("/api/favorites/**", "/api/admin/**", "/api/merchant/**",
+                        "/api/orders/**", "/api/notifications/**");
         registry.addInterceptor(adminRequiredInterceptor)
                 .addPathPatterns("/api/admin/**");
+        registry.addInterceptor(merchantRequiredInterceptor)
+                .addPathPatterns("/api/merchant/**");
     }
 }
