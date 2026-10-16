@@ -1,0 +1,27 @@
+# systemd 服务文件（不使用 Docker、直接跑 jar 的部署方式）
+# 安装：sudo cp deploy/dongchedi.service /etc/systemd/system/ && sudo systemctl daemon-reload
+[Unit]
+Description=Dongchedi car filter & recommendation platform
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=appuser
+WorkingDirectory=/opt/dongchedi
+
+# MySQL 连接信息可以通过修改这里或使用 environment file
+Environment=DB_HOST=127.0.0.1
+Environment=DB_PORT=3306
+Environment=DB_NAME=dongchedi
+Environment=DB_USER=dongchedi
+Environment=DB_PASSWORD=change-me
+Environment=SPRING_PROFILES_ACTIVE=mysql
+Environment=JAVA_OPTS=-Xms256m -Xmx512m -Dfile.encoding=UTF-8
+
+ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/dongchedi/dongchedi.jar --spring.profiles.active=mysql
+SuccessExitStatus=143
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
