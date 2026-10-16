@@ -258,6 +258,48 @@
     </div>
 </div>
 
+<div class="modal" id="orderCreateModal" hidden>
+    <div class="modal__backdrop" data-order-create-close="true"></div>
+    <div class="modal__body modal__body--narrow">
+        <header class="modal__head">
+            <h3>预约试驾 / 询价</h3>
+            <button type="button" class="modal__close" data-order-create-close="true">×</button>
+        </header>
+        <div class="modal__content">
+            <p class="auth-hint" id="orderCarInfo"></p>
+            <label class="form-label" for="orderTypeSelect">意向类型</label>
+            <select id="orderTypeSelect">
+                <option value="TEST_DRIVE">预约试驾</option>
+                <option value="INQUIRY">询价咨询</option>
+                <option value="DEPOSIT">意向定金</option>
+            </select>
+            <label class="form-label" for="orderContactName">联系人</label>
+            <input class="text-input" id="orderContactName" placeholder="您的称呼">
+            <label class="form-label" for="orderContactPhone">手机号</label>
+            <input class="text-input" id="orderContactPhone" placeholder="11 位手机号">
+            <label class="form-label" for="orderRemark">备注（可选）</label>
+            <input class="text-input" id="orderRemark" placeholder="例如：希望周末到店试驾">
+            <p class="auth-error" id="orderError" hidden></p>
+            <div class="form-actions">
+                <button class="btn btn--primary" type="button" id="orderSubmitBtn">提交并通知商家</button>
+                <button class="btn btn--ghost" type="button" data-order-create-close="true">取消</button>
+            </div>
+            <p class="auth-demo">提交后商家端会实时收到订单消息（SSE 推送）；商家处理结果也会实时推送给您。</p>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="myOrderModal" hidden>
+    <div class="modal__backdrop" data-my-order-close="true"></div>
+    <div class="modal__body">
+        <header class="modal__head">
+            <h3>我的订单</h3>
+            <button type="button" class="modal__close" data-my-order-close="true">×</button>
+        </header>
+        <div class="modal__content" id="myOrderContent"></div>
+    </div>
+</div>
+
 <div class="toast" id="toast" hidden></div>
 
 <script src="/js/app.js"></script>
