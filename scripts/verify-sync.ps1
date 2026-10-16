@@ -125,9 +125,11 @@ if (($localLog -join ',') -eq ($remoteLog -join ',')) {
 
 Write-Section '7. 分支结构比对'
 $localBranches = @(Invoke-Git @('for-each-ref', '--format=%(refname:short)', 'refs/heads'))
-$remoteBranches = @(Invoke-Git @('for-each-ref', '--format=%(refname:short)', "refs/remotes/$Remote") |
-    Where-Object { $_ -notmatch '/HEAD$' } |
-    ForEach-Object { $_ -replace "^$Remote/", '' })
+# 用 lstrip=3 直接去掉 refs/remotes/<remote>/ 前缀：
+# 注意 refname:short 对 refs/remotes/<remote>/HEAD 会返回远程别名（如 origin）而不是 origin/HEAD，
+# 用它做过滤会多出一个幽灵分支。
+$remoteBranches = @(Invoke-Git @('for-each-ref', '--format=%(refname:lstrip=3)', "refs/remotes/$Remote") |
+    Where-Object { $_ -notmatch '^HEAD$' })
 Write-Host "  本地分支: $($localBranches -join ', ')"
 Write-Host "  远端分支: $($remoteBranches -join ', ')"
 $branchDiff = @(Compare-Object $remoteBranches $localBranches)
