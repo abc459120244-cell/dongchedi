@@ -375,8 +375,8 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
      照片目录已在 `.gitignore` 中忽略，**只保存在本地、不会提交到公开仓库**，
      版权归原图站所有，仅供本地个人学习演示使用；抓取时会生成 `photos-credits.json`
      记录每张照片的来源站点与原始链接。页面会自动优先使用照片，照片缺失或加载失败时回退到矢量示意图。
-- 仓库中的提交作者信息为 `dongchedi-dev <dongchedi-dev@example.com>`（本机未配置全局 Git 身份时的占位值），
-  如需换成自己的身份，可执行：
+- 本项目由一人独立完成，仓库全部提交的作者统一为 `abc459120244-cell <abc459120244@gmail.com>`。
+  在其他机器上继续开发时，记得先配置成同一身份，提交才会统计到你的 GitHub 账号下：
 
 ```bash
 git config user.name "你的名字"
