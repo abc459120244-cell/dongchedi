@@ -699,6 +699,16 @@ select:focus {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
     gap: 16px;
+    /* 保留最小高度，避免清空/加载过程中页面高度塌陷导致滚动位置跳动 */
+    min-height: 480px;
+    /* 关闭滚动锚定：翻页替换卡片内容时浏览器不会再自动调整滚动位置 */
+    overflow-anchor: none;
+    transition: opacity .18s ease;
+}
+
+.car-grid.is-loading {
+    opacity: .55;
+    pointer-events: none;
 }
 
 .car-card {

@@ -284,7 +284,7 @@
                 return;
             }
             state.query.page = Number(button.dataset.page);
-            loadCars();
+            loadCars({scrollToList: true});
         });
 
         dom.recommendForm.addEventListener('submit', function (event) {
@@ -588,14 +588,40 @@
         return params;
     }
 
-    function loadCars() {
-        dom.carGrid.innerHTML = '<div class="empty">正在加载车型数据…</div>';
+    function loadCars(options) {
+        var scrollToList = options && options.scrollToList;
+        if (!state.lastPage) {
+            dom.carGrid.innerHTML = '<div class="empty">正在加载车型数据…</div>';
+        }
+        // 翻页时保留上一页内容，避免列表被清空导致页面高度塌陷、滚动位置跳到页面底部
+        dom.carGrid.classList.add('is-loading');
         fetchJson('/api/cars?' + buildQueryParams().toString()).then(function (page) {
             state.lastPage = page;
             renderCars(page);
             renderPagination(page);
+            if (scrollToList) {
+                scrollToListTop();
+            }
         }).catch(function (error) {
             dom.carGrid.innerHTML = '<div class="empty">加载失败：' + escapeHtml(error.message) + '</div>';
+        }).finally(function () {
+            dom.carGrid.classList.remove('is-loading');
+        });
+    }
+
+    /**
+     * 把视口重新锚定到车型列表顶部（扣掉吸顶导航的高度）。
+     *
+     * <p>用瞬时定位而不是平滑滚动：平滑滚动会被列表重排打断，反而不生效。
+     */
+    function scrollToListTop() {
+        window.requestAnimationFrame(function () {
+            var toolbar = document.querySelector('.toolbar');
+            if (!toolbar) {
+                return;
+            }
+            var top = toolbar.getBoundingClientRect().top + window.pageYOffset - 78;
+            window.scrollTo(0, Math.max(top, 0));
         });
     }
 
