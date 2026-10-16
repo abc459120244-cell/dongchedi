@@ -37,7 +37,7 @@
 | 数据层 | Spring Data JPA + Hibernate，默认 H2 文件数据库（`./data/dongchedi.mv.db`），部署时切换 MySQL 8 |
 | 实时通信 | Server-Sent Events（SSE），买家与商家双向推送订单与消息 |
 | 前端 | 原生 HTML / CSS / JavaScript（无第三方依赖） |
-| 测试 | JUnit 5 + AssertJ + MockMvc（52 个测试用例） |
+| 测试 | JUnit 5 + AssertJ + MockMvc（58 个测试用例，含多端互动流程测试） |
 
 ## 三、快速开始
 
@@ -248,7 +248,7 @@ docker compose -f deploy/docker-compose.yml exec mysql \
 ```
 dongchedi
 ├── deploy                    # 部署产物：Dockerfile、docker-compose、Nginx、systemd、一键脚本
-├── docs                      # 文档：部署指南、团队协作指南、接口说明、Git 流程记录、验收报告
+├── docs                      # 文档：部署指南、开发与提交指南、接口说明、Git 流程记录、验收报告
 ├── scripts                   # 仓库同步校验脚本、真实车型照片抓取脚本
 ├── src/main/java/com/dongchedi/car
 │   ├── controller            # CarController / RecommendController / StatisticsController / SystemController
@@ -339,7 +339,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 | --- | --- | --- |
 | （1）前后端 + 数据库 | ✅ Spring Boot 后端 + JPA/Hibernate 持久化，5 张业务表（`car` / `user_account` / `favorite` / `car_order` / `notification`）；默认 H2 文件库，部署切 MySQL | 商家端新增/改价/下架/删除车源，买家端列表实时变化；`docker compose exec mysql mysql -e "select ... from car"` 可查库 |
 | （2）多端系统项目 | ✅ 买家端 `/index.html` + 商家端 `/merchant.html` + 管理视角，共用后端与数据库 | 两个入口分别登录 `demo` 与 `dealer_byd` |
-| （3）每人都有提交记录 | ✅ 已提供分工表与标准流程，见 [docs/团队协作与提交指南.md](docs/团队协作与提交指南.md) | 每位成员按指南完成自己的分支与提交，`git shortlog -sne` 可统计 |
+| （3）远程仓库要有代码提交记录 | ✅ 本项目为**一人一组独立完成**：main 分支包含数十次按功能拆分的提交、多次 `feature/*` 分支 `--no-ff` 合并，以及一次真实的 bug 回滚演练，全部由本人提交 | 仓库提交历史 / 提交日历 / `git shortlog -sne`；提交规范见 [docs/开发与提交指南.md](docs/开发与提交指南.md) |
 | （4）部署到服务器 | ✅ 提供 Dockerfile / docker-compose（MySQL+Nginx）/ systemd / 一键脚本与完整文档 | [docs/部署指南.md](docs/部署指南.md) |
 
 ### 10.2 验收标准
@@ -348,7 +348,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 | --- | --- | --- |
 | （1）前端增删改数据 → 后端业务处理 → 数据库变化 | ✅ 商家端新增 / 修改 / 上下架 / 删除车源直接写 `car` 表；买家端下单写 `car_order` 表 | 操作后查询数据库，或重启应用后数据仍在 |
 | （2）多端互动（买家下单，卖家收到订单消息） | ✅ 买家提交预约试驾 → 订单落库并归属车源商家 → 商家端 SSE **无需刷新**收到提醒；商家处理后买家同样实时收到消息 | 商家端与买家端各开一个浏览器（或手机+电脑）演示 |
-| （3）远程仓库有每个人的提交记录 | ✅ 已给出分工与提交规范；主线提交历史、分支结构、合并记录完整 | GitHub/Gitee 仓库的 Contributors 与提交历史 |
+| （3）远程仓库有代码提交记录（一人一组） | ✅ 提交历史完整连续：按功能拆分提交 + 功能分支合并 + 一次真实的 bug 回滚演练 | GitHub/Gitee 仓库的提交历史、提交日历与 Contributors |
 | （4）项目可通过不同网络访问 | ✅ 提供服务器部署方案（Docker Compose + Nginx），并给出内网穿透备选 | 手机流量访问服务器公网地址 |
 
 ### 10.3 与原 Git 作业要求对照（同一仓库，兼顾两门作业）
