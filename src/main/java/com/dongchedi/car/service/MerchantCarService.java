@@ -35,13 +35,16 @@ public class MerchantCarService {
     private final FavoriteJpaRepository favoriteJpa;
     private final OrderJpaRepository orderJpa;
     private final NotificationService notifications;
+    private final AuditService auditService;
 
     public MerchantCarService(CarJpaRepository carJpa, FavoriteJpaRepository favoriteJpa,
-                              OrderJpaRepository orderJpa, NotificationService notifications) {
+                              OrderJpaRepository orderJpa, NotificationService notifications,
+                              AuditService auditService) {
         this.carJpa = carJpa;
         this.favoriteJpa = favoriteJpa;
         this.orderJpa = orderJpa;
         this.notifications = notifications;
+        this.auditService = auditService;
     }
 
     public List<MerchantCarView> list(UserAccount user) {
@@ -61,6 +64,9 @@ public class MerchantCarService {
         entity.setWheelbaseMm(DEFAULT_WHEELBASE_MM);
         applyForm(entity, form);
         CarEntity saved = carJpa.save(entity);
+        auditService.record(user, "新增车源", "CAR", saved.getId(),
+                String.format("%s / %s / %.2f 万 / %s", saved.getName(), saved.getBrand(),
+                        saved.getPrice(), MerchantCarView.statusLabel(saved.getStatus())));
         return MerchantCarView.from(saved);
     }
 
@@ -69,7 +75,11 @@ public class MerchantCarService {
         CarEntity entity = requireOwned(user, id);
         applyForm(entity, form);
         entity.touch();
-        return MerchantCarView.from(carJpa.save(entity));
+        CarEntity saved = carJpa.save(entity);
+        auditService.record(user, "修改车源", "CAR", saved.getId(),
+                String.format("%s / %s / %.2f 万 / %s", saved.getName(), saved.getBrand(),
+                        saved.getPrice(), MerchantCarView.statusLabel(saved.getStatus())));
+        return MerchantCarView.from(saved);
     }
 
     /**
@@ -80,14 +90,20 @@ public class MerchantCarService {
         CarEntity entity = requireOwned(user, id);
         entity.setStatus(normalizeStatus(status));
         entity.touch();
-        return MerchantCarView.from(carJpa.save(entity));
+        CarEntity saved = carJpa.save(entity);
+        auditService.record(user, saved.isOnSale() ? "上架车源" : "下架车源", "CAR", saved.getId(),
+                saved.getName() + " → " + MerchantCarView.statusLabel(saved.getStatus()));
+        return MerchantCarView.from(saved);
     }
 
     @Transactional
     public void delete(UserAccount user, Long id) {
         CarEntity entity = requireOwned(user, id);
+        String name = entity.getName();
+        String brand = entity.getBrand();
         favoriteJpa.deleteByCarId(id);
         carJpa.delete(entity);
+        auditService.record(user, "删除车源", "CAR", id, name + " / " + brand);
     }
 
     public MerchantSummary summary(UserAccount user) {

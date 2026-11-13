@@ -9,11 +9,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.dongchedi.car.dto.CarDetailView;
 import com.dongchedi.car.dto.CarQuery;
 import com.dongchedi.car.dto.FilterOptions;
 import com.dongchedi.car.dto.PageResult;
 import com.dongchedi.car.model.Car;
+import com.dongchedi.car.model.UserAccount;
+import com.dongchedi.car.service.AuthService;
+import com.dongchedi.car.service.CarDetailService;
 import com.dongchedi.car.service.CarQueryService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 车型查询接口。
@@ -23,9 +29,14 @@ import com.dongchedi.car.service.CarQueryService;
 public class CarController {
 
     private final CarQueryService carQueryService;
+    private final CarDetailService carDetailService;
+    private final AuthService authService;
 
-    public CarController(CarQueryService carQueryService) {
+    public CarController(CarQueryService carQueryService, CarDetailService carDetailService,
+                         AuthService authService) {
         this.carQueryService = carQueryService;
+        this.carDetailService = carDetailService;
+        this.authService = authService;
     }
 
     /**
@@ -46,6 +57,15 @@ public class CarController {
     @GetMapping("/{id}")
     public Car detail(@PathVariable Long id) {
         return carQueryService.getById(id);
+    }
+
+    /**
+     * 车型详情页数据：参数 + 车源商家 + 评价汇总与列表（评价公开可看）。
+     */
+    @GetMapping("/{id}/detail")
+    public CarDetailView carDetail(@PathVariable Long id, HttpServletRequest request) {
+        UserAccount currentUser = authService.currentUser(request).orElse(null);
+        return carDetailService.get(id, currentUser);
     }
 
     /**

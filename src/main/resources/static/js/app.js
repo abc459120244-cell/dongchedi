@@ -44,7 +44,9 @@
         rankingScope: 'ALL',
         orderCar: null,
         unread: 0,
-        stream: null
+        stream: null,
+        detailCar: null,
+        reviewRating: 5
     };
 
     var dom = {};
@@ -196,6 +198,8 @@
         dom.orderSubmitBtn = $('#orderSubmitBtn');
         dom.myOrderModal = $('#myOrderModal');
         dom.myOrderContent = $('#myOrderContent');
+        dom.carDetailModal = $('#carDetailModal');
+        dom.carDetailContent = $('#carDetailContent');
 
         // 先用未登录状态渲染顶栏，避免接口返回前右上角是空白
         renderUserArea();
@@ -250,6 +254,11 @@
         });
 
         dom.carGrid.addEventListener('click', function (event) {
+            var detailTarget = event.target.closest('[data-action="detail"]');
+            if (detailTarget) {
+                openCarDetail(Number(detailTarget.dataset.id));
+                return;
+            }
             var favoriteBtn = event.target.closest('[data-action="favorite"]');
             if (favoriteBtn) {
                 toggleFavorite(Number(favoriteBtn.dataset.id));
@@ -275,6 +284,29 @@
         dom.myOrderModal.addEventListener('click', function (event) {
             if (event.target.closest('[data-my-order-close]')) {
                 dom.myOrderModal.hidden = true;
+            }
+        });
+
+        dom.carDetailModal.addEventListener('click', function (event) {
+            if (event.target.closest('[data-detail-close]')) {
+                closeCarDetail();
+                return;
+            }
+            var star = event.target.closest('[data-review-rating]');
+            if (star) {
+                state.reviewRating = Number(star.dataset.reviewRating);
+                renderReviewStars();
+                return;
+            }
+            var removeReview = event.target.closest('[data-review-delete]');
+            if (removeReview) {
+                deleteReview(Number(removeReview.dataset.reviewDelete));
+            }
+        });
+        dom.carDetailContent.addEventListener('submit', function (event) {
+            if (event.target.id === 'reviewForm') {
+                event.preventDefault();
+                submitReview();
             }
         });
 
@@ -418,6 +450,7 @@
                 closeCompare();
                 closeAuthModal();
                 closeFavoriteModal();
+                closeCarDetail();
             }
         });
     }
@@ -669,7 +702,8 @@
         }).join('');
 
         return '<article class="car-card">'
-            + '<div class="car-card__cover" style="background:' + brandGradient(car.brand) + '">'
+            + '<div class="car-card__cover car-card__cover--link" data-action="detail" data-id="' + car.id
+            + '" style="background:' + brandGradient(car.brand) + '">'
             + '<img class="car-card__bg" src="/img/cars/photos/' + car.id + '.jpg" alt="" loading="lazy"'
             + ' onload="this.parentNode.classList.add(\'has-photo\')" onerror="this.remove()">'
             + '<div class="car-card__badges">' + badges + '</div>'
@@ -946,6 +980,173 @@
     function closeFavoriteModal() {
         dom.favoriteModal.hidden = true;
         dom.favoriteContent.innerHTML = '';
+    }
+
+    /* ----------------------------- 车型详情与评价 ----------------------------- */
+
+    function openCarDetail(carId) {
+        dom.carDetailModal.hidden = false;
+        dom.carDetailContent.innerHTML = '<p class="placeholder">正在加载车型详情…</p>';
+        fetchJson('/api/cars/' + carId + '/detail')
+            .then(renderCarDetail)
+            .catch(function (error) {
+                dom.carDetailContent.innerHTML = '<p class="placeholder">加载失败：'
+                    + escapeHtml(error.message) + '</p>';
+            });
+    }
+
+    function closeCarDetail() {
+        dom.carDetailModal.hidden = true;
+        dom.carDetailContent.innerHTML = '';
+        state.detailCar = null;
+    }
+
+    function renderCarDetail(detail) {
+        state.detailCar = detail;
+        var car = detail.car;
+        var summary = detail.reviewSummary || {average: 0, total: 0, fiveStar: 0, fourStar: 0, threeStar: 0, twoStar: 0, oneStar: 0};
+        var mine = (detail.reviews || []).find(function (review) {
+            return review.mine;
+        });
+        state.reviewRating = mine ? mine.rating : 5;
+
+        var tags = (car.tags || []).map(function (tag) {
+            return '<span class="tag">' + escapeHtml(tag) + '</span>';
+        }).join('');
+        var specs = [
+            ['指导价', num(car.price).toFixed(2) + ' 万'],
+            ['级别 / 车身', escapeHtml(car.levelLabel) + ' / ' + escapeHtml(car.bodyTypeLabel)],
+            ['能源类型', escapeHtml(car.energyTypeLabel)],
+            ['座位数', car.seats + ' 座'],
+            ['最大功率', car.maxPowerKw + ' kW'],
+            ['零百加速', num(car.zeroToHundredSeconds).toFixed(1) + ' s'],
+            ['轴距', car.wheelbaseMm + ' mm'],
+            ['能耗', escapeHtml(car.energyDescription)],
+            ['月销量', num(car.monthlySales).toLocaleString('zh-CN') + ' 辆']
+        ].map(function (item) {
+            return '<div class="spec-item"><b>' + item[1] + '</b><span>' + item[0] + '</span></div>';
+        }).join('');
+
+        var reviewItems = (detail.reviews || []).length
+            ? detail.reviews.map(function (review) {
+                return '<div class="review-item">'
+                    + '<div class="review-item__head"><strong>' + escapeHtml(review.userName) + '</strong>'
+                    + '<span class="review-stars">' + '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating) + '</span>'
+                    + '<small>' + escapeHtml((review.updatedAt || '').replace('T', ' ').substring(0, 16)) + '</small>'
+                    + (review.mine ? '<button type="button" class="link-btn" data-review-delete="'
+                        + review.id + '">删除</button>' : '')
+                    + '</div>'
+                    + '<p class="review-item__body">' + escapeHtml(review.content || '（未填写文字）') + '</p>'
+                    + '</div>';
+            }).join('')
+            : '<p class="placeholder">还没有评价，来做第一个评价的人吧。</p>';
+
+        var form = state.user
+            ? '<form id="reviewForm" class="review-form">'
+                + '<div class="review-form__stars" id="reviewStars">'
+                + [1, 2, 3, 4, 5].map(function (star) {
+                    return '<button type="button" class="star" data-review-rating="' + star + '">★</button>';
+                }).join('')
+                + '</div>'
+                + '<textarea id="reviewContent" maxlength="500" placeholder="说说这台车的真实感受（最多 500 字）">'
+                + escapeHtml(mine && mine.content ? mine.content : '') + '</textarea>'
+                + '<div class="review-form__foot">'
+                + '<button class="btn btn--primary btn--small" type="submit" id="reviewSubmitBtn">'
+                + (mine ? '更新我的评价' : '发布评价') + '</button>'
+                + '<button class="btn btn--ghost btn--small" type="button" id="detailOrderBtn">预约试驾 / 询价</button>'
+                + '</div></form>'
+            : '<p class="placeholder">登录后可以为该车型写评价、预约试驾。</p>';
+
+        dom.carDetailContent.innerHTML = ''
+            + '<div class="detail-hero">'
+            + '<div class="detail-cover"><img src="/img/cars/photos/' + car.id + '.jpg" alt="" loading="lazy"'
+            + ' onerror="this.onerror=null;this.src=\'/img/cars/' + String(car.bodyType || 'SEDAN').toLowerCase() + '.svg\'"></div>'
+            + '<div class="detail-info">'
+            + '<div class="detail-kicker">' + escapeHtml(car.brand) + ' · ' + escapeHtml(car.bodyTypeLabel)
+            + (car.newEnergy ? ' · <span class="tag tag--ok">新能源</span>' : '') + '</div>'
+            + '<h2 class="detail-title">' + escapeHtml(car.name) + '</h2>'
+            + '<div class="detail-price">' + num(car.price).toFixed(2) + ' 万</div>'
+            + '<p class="detail-highlight">' + escapeHtml(car.highlight || '') + '</p>'
+            + '<div class="tag-row">' + tags + '</div>'
+            + '<div class="detail-dealer">车源商家：<strong>' + escapeHtml(detail.dealerName || '平台自营') + '</strong></div>'
+            + '</div></div>'
+            + '<div class="spec-grid">' + specs + '</div>'
+            + '<section class="detail-reviews">'
+            + '<h3>用户评价</h3>'
+            + '<div class="review-head">'
+            + '<div class="review-score">' + (summary.total ? num(summary.average).toFixed(1) : '—') + '</div>'
+            + '<div><div class="review-stars">'
+            + (summary.total ? '★'.repeat(Math.round(summary.average)) + '☆'.repeat(5 - Math.round(summary.average)) : '☆☆☆☆☆')
+            + '</div><small>' + summary.total + ' 条评价</small></div>'
+            + '<div class="review-bars">'
+            + [5, 4, 3, 2, 1].map(function (star) {
+                var count = [summary.fiveStar, summary.fourStar, summary.threeStar, summary.twoStar, summary.oneStar][5 - star];
+                var width = summary.total ? Math.round(count / summary.total * 100) : 0;
+                return '<div class="review-bar"><span>' + star + ' 星</span>'
+                    + '<i><b style="width:' + width + '%"></b></i><em>' + count + '</em></div>';
+            }).join('')
+            + '</div></div>'
+            + '<div class="review-list">' + reviewItems + '</div>'
+            + form
+            + '</section>';
+
+        renderReviewStars();
+        var orderBtn = document.getElementById('detailOrderBtn');
+        if (orderBtn) {
+            orderBtn.addEventListener('click', function () {
+                closeCarDetail();
+                requestOrder(car.id);
+            });
+        }
+    }
+
+    function renderReviewStars() {
+        var container = document.getElementById('reviewStars');
+        if (!container) {
+            return;
+        }
+        Array.prototype.forEach.call(container.querySelectorAll('[data-review-rating]'), function (button) {
+            button.classList.toggle('is-active', Number(button.dataset.reviewRating) <= state.reviewRating);
+        });
+    }
+
+    function submitReview() {
+        if (!state.detailCar) {
+            return;
+        }
+        var content = document.getElementById('reviewContent');
+        var submit = document.getElementById('reviewSubmitBtn');
+        submit.disabled = true;
+        fetchJson('/api/reviews', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                carId: state.detailCar.car.id,
+                rating: state.reviewRating,
+                content: content ? content.value.trim() : ''
+            })
+        }).then(function () {
+            toast('评价已发布，感谢你的分享', 'success');
+            openCarDetail(state.detailCar.car.id);
+        }).catch(function (error) {
+            toast(error.message);
+        }).finally(function () {
+            if (submit) {
+                submit.disabled = false;
+            }
+        });
+    }
+
+    function deleteReview(id) {
+        if (!window.confirm('确定删除这条评价吗？')) {
+            return;
+        }
+        fetchJson('/api/reviews/' + id, {method: 'DELETE'}).then(function () {
+            toast('评价已删除');
+            openCarDetail(state.detailCar.car.id);
+        }).catch(function (error) {
+            toast(error.message);
+        });
     }
 
     /* ----------------------------- 下单与我的订单 ----------------------------- */

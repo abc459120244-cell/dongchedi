@@ -31,14 +31,17 @@ public class OrderService {
     private final UserJpaRepository userJpa;
     private final NotificationService notifications;
     private final RealtimeNotifier notifier;
+    private final AuditService auditService;
 
     public OrderService(OrderJpaRepository orderJpa, CarJpaRepository carJpa, UserJpaRepository userJpa,
-                        NotificationService notifications, RealtimeNotifier notifier) {
+                        NotificationService notifications, RealtimeNotifier notifier,
+                        AuditService auditService) {
         this.orderJpa = orderJpa;
         this.carJpa = carJpa;
         this.userJpa = userJpa;
         this.notifications = notifications;
         this.notifier = notifier;
+        this.auditService = auditService;
     }
 
     /**
@@ -87,10 +90,19 @@ public class OrderService {
     /**
      * 商家查看收到的订单，可按状态过滤。
      */
-    public List<OrderView> listForDealer(UserAccount dealer, String status) {
+    public List<OrderView> listForDealer(UserAccount dealer, String status, String keyword) {
         List<OrderEntity> list = status == null || status.isBlank()
                 ? orderJpa.findByDealerIdOrderByIdDesc(dealer.id())
                 : orderJpa.findByDealerIdAndStatusOrderByIdDesc(dealer.id(), status.trim().toUpperCase());
+        if (keyword != null && !keyword.isBlank()) {
+            String needle = keyword.trim().toLowerCase();
+            list = list.stream()
+                    .filter(order -> contains(order.getCarName(), needle)
+                            || contains(order.getBuyerName(), needle)
+                            || contains(order.getContactName(), needle)
+                            || contains(order.getContactPhone(), needle))
+                    .toList();
+        }
         String name = dealer.displayName();
         return list.stream().map(order -> OrderView.from(order, name)).toList();
     }
@@ -124,7 +136,14 @@ public class OrderService {
                         reply == null || reply.isBlank() ? "" : "，商家回复：" + reply),
                 saved.getId());
         notifier.push(order.getBuyerId(), "order", view);
+        auditService.record(dealer, "处理订单", "ORDER", orderId,
+                String.format("订单 #%d（%s）→ %s%s", orderId, order.getCarName(), target.label(),
+                        reply == null || reply.isBlank() ? "" : "，回复：" + reply));
         return view;
+    }
+
+    private boolean contains(String value, String needle) {
+        return value != null && value.toLowerCase().contains(needle);
     }
 
     public long pendingCount(Long dealerId) {

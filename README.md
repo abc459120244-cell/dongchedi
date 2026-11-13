@@ -18,11 +18,14 @@
 - **性能车**：20 款零百 5 秒内的性能车（钢炮、性能轿车、性能旅行车、后驱跑车、超跑、性能皮卡），卡片上有「性能车」徽标，首页提供「只看性能车」快捷入口。
 - **智能推荐**：按预算、场景、能源偏好、优先级（综合 / 经济性 / 动力 / 空间 / 口碑）加权打分，输出推荐理由与得分构成。
 - **车型对比**：勾选 2~4 款车生成横向对比表，自动高亮更优项。
+- **车型详情**：点击卡片封面查看完整参数、车源商家、车主评价与星级分布。
+- **车主评价**：登录后可对车型打 1~5 星并撰写评价（同一车型每人一条，可修改/删除），详情页实时汇总平均分与分布。
 - **市场榜单**：品牌销量排行、能源类型分布、价格区间分布、用车场景分布。
 - **用户系统**：注册 / 登录 / 退出、基于服务端会话的登录态、普通用户与管理员两种角色。
 - **收藏**：登录后收藏保存到账号（按用户隔离），未登录时临时保存在浏览器本地。
 - **商家端（多端）**：独立入口 `/merchant.html`，支持车源新增 / 修改 / 上下架 / 删除，以及订单的确认、拒绝、完成。
 - **实时消息（SSE）**：买家提交预约试驾 / 询价后，对应商家端**无需刷新**即收到提醒；商家处理订单后买家同样实时收到状态变更。
+- **商家运营工具**：订单支持按车型 / 买家 / 联系人 / 手机号搜索，一键导出 CSV；所有车源与订单操作都会写入**操作审计日志**。
 - **数据库持久化**：车型、用户、收藏、订单、消息全部落库（默认 H2 文件数据库，可一键切换 MySQL）。
 
 ## 二、技术栈
@@ -126,6 +129,11 @@ java -jar target/dongchedi.jar --spring.profiles.active=mysql \
 | POST | `/api/merchant/cars/{id}/status` | 上架 / 下架车源 |
 | GET | `/api/merchant/orders` | 收到的订单（可按状态过滤） |
 | POST | `/api/merchant/orders/{id}/status` | 处理订单（确认 / 拒绝 / 完成） |
+| GET | `/api/merchant/orders?status=&keyword=` | 订单按状态 + 关键字（车型/买家/手机号）搜索 |
+| GET | `/api/merchant/logs?limit=30` | 操作审计日志（商家看自己，管理员看全部） |
+| GET | `/api/cars/{id}/detail` | 车型详情聚合：参数 + 商家 + 评价汇总与列表 |
+| POST | `/api/reviews` | 发表 / 修改车主评价（需登录） |
+| DELETE | `/api/reviews/{id}` | 删除自己的评价（需登录） |
 
 更多参数与返回示例见 [docs/接口说明.md](docs/接口说明.md)。
 
@@ -138,8 +146,10 @@ java -jar target/dongchedi.jar --spring.profiles.active=mysql \
 | `demo` | `demo123` | 普通用户 | 3 款（秦PLUS DM-i、Model Y、理想 L7） |
 | `admin` | `admin123` | 管理员 | 无 |
 | `dealer_byd` | `dealer123` | 商家（比亚迪 / 仰望 / 方程豹 / 腾势，8 款车源） | 无 |
-| `dealer_ev` | `dealer123` | 商家（特斯拉 / 蔚来 / 小鹏 / 理想 / 小米 / 极氪 / 问界 / 零跑 / 智己） | 无 |
-| `dealer_intl` | `dealer123` | 商家（大众 / 丰田 / 本田 / 宝马 / 奔驰 / 奥迪 / 保时捷等 20 个品牌） | 无 |
+| `dealer_ev` | `dealer123` | 商家（特斯拉 / 蔚来 / 小鹏 / 理想 / 小米 / 极氪 / 问界 / 零跑 / 智己，16 款车源） | 无 |
+| `dealer_intl` | `dealer123` | 商家（德系 + 日系：大众 / 宝马 / 奔驰 / 奥迪 / 保时捷 / 丰田 / 本田 / 日产，23 款车源） | 无 |
+| `dealer_cn` | `dealer123` | 商家（中国品牌：吉利 / 长安 / 哈弗 / 五菱 / 奇瑞 / 领克 / 坦克 / 长城，10 款车源） | 无 |
+| `dealer_import` | `dealer123` | 商家（其他进口：沃尔沃 / 福特 / 别克 / 现代，6 款车源） | 无 |
 
 演示账号在 `application.yml` 的 `dongchedi.auth.seed-users` 中配置，
 应用启动时会先做 BCrypt 哈希再写入内存用户仓库，仓库中不保存明文密码。
@@ -208,6 +218,8 @@ java -jar target/dongchedi.jar --spring.profiles.active=mysql \
 | `favorite` | 收藏 | `user_id` + `car_id` 唯一约束 |
 | `car_order` | 订单 | `id`、`car_id`、`dealer_id`、`buyer_id`、`contact_phone`、`status`、`dealer_reply` |
 | `notification` | 站内消息 | `id`、`user_id`、`type`、`title`、`content`、`read_flag` |
+| `review` | 车主评价 | `car_id` + `user_id` 唯一约束、`rating`（1~5）、`content` |
+| `operation_log` | 操作审计 | `operator_id`、`action`、`target_type`、`target_id`、`detail` |
 
 查看数据库内容：
 

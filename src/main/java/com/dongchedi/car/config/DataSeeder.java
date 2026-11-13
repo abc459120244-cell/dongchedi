@@ -42,8 +42,13 @@ public class DataSeeder implements ApplicationRunner {
     static {
         DEALER_BRANDS.put("dealer_byd", List.of("比亚迪", "仰望", "方程豹", "腾势"));
         DEALER_BRANDS.put("dealer_ev", List.of("特斯拉", "蔚来", "小鹏", "理想", "小米", "极氪", "问界", "零跑", "智己"));
+        // 德系 + 日系：展厅名称与车源保持一致
         DEALER_BRANDS.put("dealer_intl", List.of("大众", "丰田", "本田", "日产", "宝马", "奔驰", "奥迪",
-                "保时捷", "沃尔沃", "福特", "现代", "长城", "五菱", "吉利", "长安", "奇瑞", "哈弗", "领克", "别克", "坦克"));
+                "保时捷"));
+        // 中国自主品牌（长城汽车旗下：长城 / 哈弗 / 坦克；吉利系：吉利 / 领克）
+        DEALER_BRANDS.put("dealer_cn", List.of("吉利", "长安", "哈弗", "五菱", "奇瑞", "领克", "坦克", "长城"));
+        // 既非德系也非日系的其他进口品牌：瑞典 / 美系 / 韩系
+        DEALER_BRANDS.put("dealer_import", List.of("沃尔沃", "福特", "别克", "现代"));
     }
 
     private final AuthProperties properties;
@@ -77,6 +82,7 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         seedUsers();
         seedCars();
+        syncDealerAssignments();
         seedFavorites();
     }
 
@@ -149,6 +155,32 @@ public class DataSeeder implements ApplicationRunner {
                     }
                 }
             });
+        }
+    }
+
+    /**
+     * 按品牌重新对账车源归属。
+     *
+     * <p>商家分组调整后（例如把中国品牌拆成单独展厅），已有数据库里的车源
+     * 仍然挂在旧商家名下；每次启动时按品牌同步一次即可自动纠正。
+     */
+    private void syncDealerAssignments() {
+        Map<String, Long> mapping = resolveDealerIds();
+        if (mapping.isEmpty()) {
+            return;
+        }
+        int updated = 0;
+        for (CarEntity car : carJpa.findAll()) {
+            Long target = mapping.get(car.getBrand());
+            if (target != null && !target.equals(car.getDealerId())) {
+                car.setDealerId(target);
+                car.touch();
+                carJpa.save(car);
+                updated++;
+            }
+        }
+        if (updated > 0) {
+            log.info("已按品牌将 {} 款车源重新归属到对应商家", updated);
         }
     }
 

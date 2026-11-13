@@ -77,6 +77,14 @@ dongchedi:
         password: dealer123
         nickname: 德系日系联合展厅
         role: MERCHANT
+      - username: dealer_cn
+        password: dealer123
+        nickname: 中国品牌联合展厅
+        role: MERCHANT
+      - username: dealer_import
+        password: dealer123
+        nickname: 欧美韩进口车展厅
+        role: MERCHANT
 
 logging:
   level:

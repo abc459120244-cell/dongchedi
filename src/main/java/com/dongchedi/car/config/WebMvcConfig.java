@@ -33,7 +33,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(loginRequiredInterceptor)
                 .addPathPatterns("/api/favorites/**", "/api/admin/**", "/api/merchant/**",
-                        "/api/orders/**", "/api/notifications/**");
+                        "/api/orders/**", "/api/notifications/**", "/api/reviews", "/api/reviews/**");
         registry.addInterceptor(adminRequiredInterceptor)
                 .addPathPatterns("/api/admin/**");
         registry.addInterceptor(merchantRequiredInterceptor)

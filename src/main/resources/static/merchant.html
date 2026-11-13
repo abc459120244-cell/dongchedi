@@ -42,7 +42,9 @@
             <p class="auth-demo">
                 演示商家账号：<code>dealer_byd / dealer123</code>（比亚迪新能源旗舰店）、
                 <code>dealer_ev / dealer123</code>（新势力体验中心）、
-                <code>dealer_intl / dealer123</code>（德系日系联合展厅）；
+                <code>dealer_intl / dealer123</code>（德系日系联合展厅）、
+                <code>dealer_cn / dealer123</code>（中国品牌联合展厅）、
+                <code>dealer_import / dealer123</code>（欧美韩进口车展厅）；
                 也可以用管理员 <code>admin / admin123</code> 登录查看全部车源与订单。
             </p>
         </div>
@@ -93,6 +95,14 @@
                 <button type="button" data-status="COMPLETED">已完成</button>
             </div>
         </div>
+        <div class="merchant-toolbar">
+            <div class="merchant-toolbar__left">
+                <input class="text-input text-input--inline" id="orderKeyword"
+                       placeholder="搜索车型 / 买家 / 联系人 / 手机号">
+                <button class="btn btn--ghost btn--small" type="button" id="orderSearchBtn">搜索</button>
+            </div>
+            <button class="btn btn--ghost btn--small" type="button" id="exportOrdersBtn">导出 CSV</button>
+        </div>
         <div class="panel">
             <table class="table table--wide">
                 <thead>
@@ -109,6 +119,27 @@
                 </tr>
                 </thead>
                 <tbody id="orderTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="section__head section__head--row">
+            <div>
+                <h2>操作日志</h2>
+                <p>每一次车源新增 / 修改 / 上下架 / 删除、订单处理都会写入数据库，便于追溯与验收。</p>
+            </div>
+            <button class="btn btn--ghost btn--small" type="button" id="refreshLogsBtn">刷新日志</button>
+        </div>
+        <div class="panel">
+            <table class="table table--wide">
+                <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>操作</th>
+                    <th>对象</th>
+                    <th>详情</th>
+                </tr>
+                </thead>
+                <tbody id="logTableBody"></tbody>
             </table>
         </div>
     </section>

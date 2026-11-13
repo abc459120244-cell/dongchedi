@@ -17,6 +17,7 @@
         editingId: null,
         handlingOrderId: null,
         orderFilter: '',
+        orderKeyword: '',
         stream: null
     };
 
@@ -92,6 +93,11 @@
         dom.carTableBody = $('#carTableBody');
         dom.orderTableBody = $('#orderTableBody');
         dom.orderFilter = $('#orderFilter');
+        dom.orderKeyword = $('#orderKeyword');
+        dom.orderSearchBtn = $('#orderSearchBtn');
+        dom.exportOrdersBtn = $('#exportOrdersBtn');
+        dom.logTableBody = $('#logTableBody');
+        dom.refreshLogsBtn = $('#refreshLogsBtn');
         dom.carModal = $('#carModal');
         dom.carForm = $('#carForm');
         dom.carModalTitle = $('#carModalTitle');
@@ -120,7 +126,7 @@
                 password: dom.loginPassword.value
             }).then(function (user) {
                 if (user.role !== 'MERCHANT' && user.role !== 'ADMIN') {
-                    throw new Error('该账号不是商家账号，请使用 dealer_byd / dealer_ev / dealer_intl 登录');
+                    throw new Error('该账号不是商家账号，请使用 dealer_byd / dealer_ev / dealer_intl / dealer_cn / dealer_import 登录');
                 }
                 state.user = user;
                 dom.loginPassword.value = '';
@@ -196,6 +202,19 @@
             loadOrders();
         });
 
+        dom.orderSearchBtn.addEventListener('click', function () {
+            state.orderKeyword = dom.orderKeyword.value.trim();
+            loadOrders();
+        });
+        dom.orderKeyword.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                dom.orderSearchBtn.click();
+            }
+        });
+        dom.exportOrdersBtn.addEventListener('click', exportOrdersCsv);
+        dom.refreshLogsBtn.addEventListener('click', loadLogs);
+
         dom.orderTableBody.addEventListener('click', function (event) {
             var button = event.target.closest('button[data-order-action="handle"]');
             if (!button) {
@@ -261,6 +280,7 @@
         loadSummary();
         loadCars();
         loadOrders();
+        loadLogs();
         connectStream();
     }
 
@@ -360,7 +380,14 @@
     }
 
     function loadOrders() {
-        var url = '/api/merchant/orders' + (state.orderFilter ? '?status=' + state.orderFilter : '');
+        var params = new URLSearchParams();
+        if (state.orderFilter) {
+            params.set('status', state.orderFilter);
+        }
+        if (state.orderKeyword) {
+            params.set('keyword', state.orderKeyword);
+        }
+        var url = '/api/merchant/orders' + (params.toString() ? '?' + params.toString() : '');
         return fetchJson(url).then(function (orders) {
             state.orders = orders;
             if (!orders.length) {
@@ -483,6 +510,7 @@
             toast(state.editingId ? '车源已更新，数据库已同步' : '车源已新增，买家端即可看到', 'success');
             loadCars();
             loadSummary();
+            loadLogs();
         }).catch(function (error) {
             dom.carError.textContent = error.message;
             dom.carError.hidden = false;
@@ -497,6 +525,7 @@
                 toast(nextStatus === 'ON_SALE' ? '已上架，买家端可见' : '已下架，买家端不再展示', 'success');
                 loadCars();
                 loadSummary();
+                loadLogs();
             }).catch(function (error) {
                 toast(error.message);
             });
@@ -513,6 +542,7 @@
             toast('车源已删除，数据库已同步', 'success');
             loadCars();
             loadSummary();
+            loadLogs();
         }).catch(function (error) {
             toast(error.message);
         });
@@ -549,11 +579,67 @@
             toast('订单已处理，已通知买家', 'success');
             loadOrders();
             loadSummary();
+            loadLogs();
         }).catch(function (error) {
             toast(error.message);
         }).finally(function () {
             dom.orderSubmitBtn.disabled = false;
         });
+    }
+
+    /* --------------------------- 操作日志与导出 --------------------------- */
+
+    function loadLogs() {
+        if (!state.user) {
+            return Promise.resolve();
+        }
+        return fetchJson('/api/merchant/logs?limit=30').then(function (logs) {
+            if (!logs.length) {
+                dom.logTableBody.innerHTML = '<tr><td colspan="4" class="placeholder">还没有操作记录</td></tr>';
+                return;
+            }
+            dom.logTableBody.innerHTML = logs.map(function (log) {
+                return '<tr>'
+                    + '<td><small>' + escapeHtml((log.createdAt || '').replace('T', ' ').substring(0, 19)) + '</small></td>'
+                    + '<td><span class="tag tag--done">' + escapeHtml(log.action) + '</span></td>'
+                    + '<td>' + escapeHtml(log.targetType || '') + (log.targetId ? ' #' + log.targetId : '') + '</td>'
+                    + '<td><small>' + escapeHtml(log.detail || '') + '</small></td>'
+                    + '</tr>';
+            }).join('');
+        }).catch(function (error) {
+            dom.logTableBody.innerHTML = '<tr><td colspan="4" class="placeholder">加载日志失败：'
+                + escapeHtml(error.message) + '</td></tr>';
+        });
+    }
+
+    function exportOrdersCsv() {
+        if (!state.orders.length) {
+            toast('当前没有可导出的订单');
+            return;
+        }
+        var header = ['订单号', '车型', '买家', '联系人', '手机号', '类型', '状态', '备注', '商家回复', '下单时间'];
+        var rows = state.orders.map(function (order) {
+            return [order.id, order.carName, order.buyerName, order.contactName, order.contactPhone,
+                order.typeLabel, order.statusLabel, order.remark || '', order.dealerReply || '',
+                (order.createdAt || '').replace('T', ' ').substring(0, 19)];
+        });
+        var csv = [header].concat(rows).map(function (row) {
+            return row.map(function (cell) {
+                var text = String(cell === null || cell === undefined ? '' : cell);
+                return '"' + text.replace(/"/g, '""') + '"';
+            }).join(',');
+        }).join('\r\n');
+
+        var blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8;'});
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'orders-' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        toast('已导出 ' + state.orders.length + ' 条订单', 'success');
     }
 
     /* --------------------------- 实时消息（SSE） --------------------------- */
@@ -571,6 +657,7 @@
             toast('收到新的订单：' + order.carName + ' · ' + order.typeLabel + '（' + order.buyerName + '）', 'success');
             loadOrders();
             loadSummary();
+            loadLogs();
         });
         stream.addEventListener('notification', function () {
             loadSummary();

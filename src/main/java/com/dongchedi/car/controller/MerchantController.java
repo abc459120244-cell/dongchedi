@@ -17,7 +17,9 @@ import com.dongchedi.car.dto.CarFormRequest;
 import com.dongchedi.car.dto.MerchantCarView;
 import com.dongchedi.car.dto.MerchantSummary;
 import com.dongchedi.car.dto.OrderView;
+import com.dongchedi.car.dto.OperationLogView;
 import com.dongchedi.car.model.UserAccount;
+import com.dongchedi.car.service.AuditService;
 import com.dongchedi.car.service.MerchantCarService;
 import com.dongchedi.car.service.OrderService;
 import com.dongchedi.car.support.SessionKeys;
@@ -33,10 +35,13 @@ public class MerchantController {
 
     private final MerchantCarService merchantCarService;
     private final OrderService orderService;
+    private final AuditService auditService;
 
-    public MerchantController(MerchantCarService merchantCarService, OrderService orderService) {
+    public MerchantController(MerchantCarService merchantCarService, OrderService orderService,
+                              AuditService auditService) {
         this.merchantCarService = merchantCarService;
         this.orderService = orderService;
+        this.auditService = auditService;
     }
 
     @GetMapping("/summary")
@@ -84,8 +89,18 @@ public class MerchantController {
      */
     @GetMapping("/orders")
     public List<OrderView> orders(@RequestAttribute(SessionKeys.CURRENT_USER_ATTRIBUTE) UserAccount user,
-                                  @RequestParam(required = false) String status) {
-        return orderService.listForDealer(user, status);
+                                  @RequestParam(required = false) String status,
+                                  @RequestParam(required = false) String keyword) {
+        return orderService.listForDealer(user, status, keyword);
+    }
+
+    /**
+     * 最近操作日志：商家看自己的操作，管理员看全部。
+     */
+    @GetMapping("/logs")
+    public List<OperationLogView> logs(@RequestAttribute(SessionKeys.CURRENT_USER_ATTRIBUTE) UserAccount user,
+                                       @RequestParam(required = false, defaultValue = "30") int limit) {
+        return auditService.list(user, limit);
     }
 
     /**

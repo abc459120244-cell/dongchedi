@@ -1513,6 +1513,28 @@ select:focus {
     gap: 6px;
 }
 
+.merchant-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.merchant-toolbar__left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.text-input--inline {
+    width: 280px;
+    max-width: 100%;
+    margin-bottom: 0;
+}
+
 .icon-btn--danger:hover {
     border-color: #e03407;
     color: #e03407;
@@ -1594,6 +1616,247 @@ select:focus {
 
 .toast--ok {
     background: rgba(23, 163, 91, .95);
+}
+
+/* ---------- 车型详情与评价 ---------- */
+.car-card__cover--link {
+    cursor: pointer;
+}
+
+.modal__body--detail {
+    width: min(980px, 94vw);
+    max-height: 90vh;
+}
+
+.detail-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 18px;
+}
+
+.detail-cover {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f4f5f7;
+    min-height: 220px;
+}
+
+.detail-cover img {
+    width: 100%;
+    height: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    display: block;
+}
+
+.detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-kicker {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.detail-title {
+    font-size: 24px;
+    line-height: 1.25;
+}
+
+.detail-price {
+    color: var(--brand-dark);
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.detail-highlight {
+    color: #55595f;
+    margin: 0;
+}
+
+.tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.detail-dealer {
+    margin-top: auto;
+    font-size: 13px;
+    color: #4a4d55;
+}
+
+.spec-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 18px 0;
+}
+
+.spec-item {
+    background: #f8f9fb;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.spec-item b {
+    display: block;
+    font-size: 15px;
+    color: #2b2d33;
+}
+
+.spec-item span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.detail-reviews h3 {
+    font-size: 17px;
+    margin: 0 0 12px;
+}
+
+.review-head {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 14px;
+}
+
+.review-score {
+    font-size: 38px;
+    font-weight: 700;
+    color: var(--brand-dark);
+    line-height: 1;
+}
+
+.review-stars {
+    color: #f5a623;
+    letter-spacing: 2px;
+}
+
+.review-bars {
+    flex: 1;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.review-bar {
+    display: grid;
+    grid-template-columns: 42px 1fr 26px;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+.review-bar i {
+    height: 7px;
+    background: #f1f2f5;
+    border-radius: 999px;
+    overflow: hidden;
+    display: block;
+}
+
+.review-bar i b {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--brand), #ffa06a);
+    border-radius: 999px;
+}
+
+.review-bar em {
+    font-style: normal;
+    text-align: right;
+}
+
+.review-list {
+    margin: 8px 0 4px;
+}
+
+.review-item {
+    border-bottom: 1px dashed var(--line);
+    padding: 10px 0;
+}
+
+.review-item__head {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.review-item__head small {
+    color: var(--muted);
+}
+
+.review-item__head .link-btn {
+    margin-left: auto;
+}
+
+.review-item__body {
+    margin: 6px 0 0;
+    color: #55595f;
+    font-size: 13px;
+}
+
+.review-form {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.review-form__stars {
+    display: flex;
+    gap: 4px;
+}
+
+.review-form__stars .star {
+    border: 0;
+    background: transparent;
+    font-size: 24px;
+    color: #dcdfe4;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.review-form__stars .star.is-active {
+    color: #f5a623;
+}
+
+.review-form textarea {
+    width: 100%;
+    min-height: 70px;
+    border: 1px solid #dfe1e7;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: vertical;
+}
+
+.review-form__foot {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+    .detail-hero {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .spec-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 720px) {
