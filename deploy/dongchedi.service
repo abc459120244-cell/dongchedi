@@ -16,6 +16,7 @@ Environment=DB_NAME=dongchedi
 Environment=DB_USER=dongchedi
 Environment=DB_PASSWORD=change-me
 Environment=SPRING_PROFILES_ACTIVE=mysql
+Environment=DONGCHEDI_UPLOAD_DIR=/opt/dongchedi/uploads
 Environment=JAVA_OPTS=-Xms256m -Xmx512m -Dfile.encoding=UTF-8
 
 ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/dongchedi/dongchedi.jar --spring.profiles.active=mysql

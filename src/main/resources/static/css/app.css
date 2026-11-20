@@ -1535,6 +1535,36 @@ select:focus {
     margin-bottom: 0;
 }
 
+.photo-upload {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.photo-upload img {
+    width: 200px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #f4f5f7;
+}
+
+.photo-upload__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.photo-upload__hint {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0;
+}
+
 .icon-btn--danger:hover {
     border-color: #e03407;
     color: #e03407;

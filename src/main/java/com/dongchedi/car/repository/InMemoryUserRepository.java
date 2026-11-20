@@ -57,7 +57,7 @@ public class InMemoryUserRepository implements UserRepository {
         long id = sequence.incrementAndGet();
         UserAccount account = new UserAccount(id, display,
                 nickname == null || nickname.isBlank() ? null : nickname.trim(),
-                role, passwordHash, LocalDateTime.now());
+                role, passwordHash, true, LocalDateTime.now());
 
         // 用 putIfAbsent 保证并发注册时同名用户只会成功一个
         Long existing = idByUsername.putIfAbsent(key, id);

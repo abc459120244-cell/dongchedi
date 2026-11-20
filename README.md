@@ -24,8 +24,10 @@
 - **用户系统**：注册 / 登录 / 退出、基于服务端会话的登录态、普通用户与管理员两种角色。
 - **收藏**：登录后收藏保存到账号（按用户隔离），未登录时临时保存在浏览器本地。
 - **商家端（多端）**：独立入口 `/merchant.html`，支持车源新增 / 修改 / 上下架 / 删除，以及订单的确认、拒绝、完成。
+- **车源实拍图上传**：商家可给自己名下车型上传 JPG / PNG / WebP 图片（单张 5MB），支持预览、替换和删除；买家端卡片与详情页优先展示实拍图，没有图片时自动回退到矢量示意图。
 - **实时消息（SSE）**：买家提交预约试驾 / 询价后，对应商家端**无需刷新**即收到提醒；商家处理订单后买家同样实时收到状态变更。
 - **商家运营工具**：订单支持按车型 / 买家 / 联系人 / 手机号搜索，一键导出 CSV；所有车源与订单操作都会写入**操作审计日志**。
+- **管理端用户管理**：独立入口 `/admin.html`，管理员可搜索用户、禁用 / 启用账号、调整普通用户 / 商家 / 管理员角色；禁用后已有会话立即失效，相关操作写入审计日志。
 - **数据库持久化**：车型、用户、收藏、订单、消息全部落库（默认 H2 文件数据库，可一键切换 MySQL）。
 
 ## 二、技术栈
@@ -40,7 +42,7 @@
 | 数据层 | Spring Data JPA + Hibernate，默认 H2 文件数据库（`./data/dongchedi.mv.db`），部署时切换 MySQL 8 |
 | 实时通信 | Server-Sent Events（SSE），买家与商家双向推送订单与消息 |
 | 前端 | 原生 HTML / CSS / JavaScript（无第三方依赖） |
-| 测试 | JUnit 5 + AssertJ + MockMvc（58 个测试用例，含多端互动流程测试） |
+| 测试 | JUnit 5 + AssertJ + MockMvc（66 个测试用例，含图片上传、用户管理、权限与多端互动流程测试） |
 
 ## 三、快速开始
 
@@ -62,6 +64,7 @@ java -jar target/dongchedi.jar
 
 - 买家端：<http://localhost:8080/>（或 `/index.html`）
 - 商家端：<http://localhost:8080/merchant.html>
+- 管理端：<http://localhost:8080/admin.html>（管理员登录后管理用户）
 - 数据库控制台（仅开发环境）：<http://localhost:8080/h2-console>，JDBC URL `jdbc:h2:file:./data/dongchedi`，用户名 `sa`，密码为空
 
 > 若 8080 端口已被占用，可指定其他端口：`java -jar target/dongchedi.jar --server.port=18080`，
@@ -117,6 +120,9 @@ java -jar target/dongchedi.jar --spring.profiles.active=mysql \
 | DELETE | `/api/favorites/{carId}` | 取消收藏（需登录） |
 | DELETE | `/api/favorites` | 清空收藏（需登录） |
 | GET | `/api/admin/users` | 用户列表（需管理员角色） |
+| GET | `/api/admin/summary` | 用户统计：用户总数、禁用数、商家数、管理员数（需管理员角色） |
+| POST | `/api/admin/users/{id}/enabled?enabled=false` | 禁用 / 启用账号（需管理员角色，不能操作自己） |
+| POST | `/api/admin/users/{id}/role?role=MERCHANT` | 调整账号角色（需管理员角色，不能操作自己） |
 | POST | `/api/orders` | 买家提交预约试驾 / 询价 / 意向定金（需登录） |
 | GET | `/api/orders/mine` | 我的订单（需登录） |
 | GET | `/api/notifications` | 我的站内消息（需登录） |
@@ -127,6 +133,8 @@ java -jar target/dongchedi.jar --spring.profiles.active=mysql \
 | GET / POST | `/api/merchant/cars` | 我的车源列表 / 新增车源 |
 | PUT / DELETE | `/api/merchant/cars/{id}` | 修改 / 删除车源 |
 | POST | `/api/merchant/cars/{id}/status` | 上架 / 下架车源 |
+| POST | `/api/merchant/cars/{id}/photo` | 上传 / 替换车源实拍图（multipart 字段名 `file`） |
+| DELETE | `/api/merchant/cars/{id}/photo` | 删除车源实拍图并回退到矢量示意图 |
 | GET | `/api/merchant/orders` | 收到的订单（可按状态过滤） |
 | POST | `/api/merchant/orders/{id}/status` | 处理订单（确认 / 拒绝 / 完成） |
 | GET | `/api/merchant/orders?status=&keyword=` | 订单按状态 + 关键字（车型/买家/手机号）搜索 |
@@ -159,6 +167,8 @@ java -jar target/dongchedi.jar --spring.profiles.active=mysql \
 - **注册**：用户名 4~20 位字母 / 数字 / 下划线，密码 6~32 位且必须同时包含字母和数字；注册成功即自动登录。
 - **登录 / 退出**：基于服务端会话（`HttpSession`），Cookie 设置 `HttpOnly` + `SameSite=Lax`，30 分钟无操作自动过期。
 - **角色权限**：`USER` 管理自己的收藏与订单；`MERCHANT` 管理自己名下的车源与订单；`ADMIN` 可管理全部车源并访问 `/api/admin/**`。
+- **账号禁用**：管理员禁用账号后，该账号不能重新登录，已经建立的会话也会在下一次请求时立即失效。
+- **角色调整**：管理员可在 `/admin.html` 将账号调整为 `USER`、`MERCHANT` 或 `ADMIN`；管理员不能修改自己的状态与角色，避免误锁系统。
 - **收藏**：登录后保存到账号（服务端按用户隔离）；未登录时可临时收藏到浏览器本地，并提示登录。
 - **顶栏用户区**：显示昵称与角色、「我的收藏」入口与退出按钮。
 
@@ -187,9 +197,10 @@ java -jar target/dongchedi.jar --spring.profiles.active=mysql \
 | --- | --- | --- |
 | 买家端 | `/index.html` | 多条件筛选、智能推荐、车型对比、收藏、**预约试驾 / 询价**、我的订单与消息 |
 | 商家端 | `/merchant.html` | 经营概览、**车源增删改与上下架**、**订单处理**、站内消息 |
-| 管理视角 | 复用商家端（用 `admin` 登录） | 查看全部车源与全部订单 |
+| 管理端 | `/admin.html` | 用户搜索、启用 / 禁用账号、调整角色、查看用户统计 |
+| 管理视角 | 用 `admin` 登录商家端 | 查看全部车源与全部订单 |
 
-两套界面共用同一个后端服务与数据库，PC 与手机浏览器都做了响应式适配。
+三套界面共用同一个后端服务与数据库，PC 与手机浏览器都做了响应式适配。
 
 ### 6.2 互动闭环（对应验收标准「买家下单，卖家收到订单消息」）
 
@@ -213,8 +224,8 @@ java -jar target/dongchedi.jar --spring.profiles.active=mysql \
 
 | 表 | 说明 | 关键字段 |
 | --- | --- | --- |
-| `car` | 车型 / 车源 | `id`、`name`、`brand`、`price`、`monthly_sales`、`dealer_id`（车源归属商家）、`status`（在售 / 已下架） |
-| `user_account` | 用户 | `id`、`username`（唯一）、`role`（USER / MERCHANT / ADMIN）、`password_hash`（BCrypt） |
+| `car` | 车型 / 车源 | `id`、`name`、`brand`、`price`、`monthly_sales`、`dealer_id`（车源归属商家）、`status`（在售 / 已下架）、`photo_url`（车源实拍图） |
+| `user_account` | 用户 | `id`、`username`（唯一）、`role`（USER / MERCHANT / ADMIN）、`password_hash`（BCrypt）、`enabled`（是否启用） |
 | `favorite` | 收藏 | `user_id` + `car_id` 唯一约束 |
 | `car_order` | 订单 | `id`、`car_id`、`dealer_id`、`buyer_id`、`contact_phone`、`status`、`dealer_reply` |
 | `notification` | 站内消息 | `id`、`user_id`、`type`、`title`、`content`、`read_flag` |
@@ -273,14 +284,14 @@ dongchedi
 │   ├── model                 # 领域模型与枚举
 │   ├── repository            # 数据访问接口 + JPA 实现（jpa 子包为 Spring Data 仓库）
 │   ├── security              # 登录 / 商家 / 管理员拦截器
-│   ├── service               # 筛选、推荐、统计、订单、消息与实时推送
+│   ├── service               # 筛选、推荐、统计、订单、消息、实时推送、图片上传与用户管理
 │   └── support               # 通用工具
 ├── src/main/resources
 │   ├── application.yml       # 默认 H2 文件数据库
 │   ├── application-mysql.yml # MySQL 配置（部署时使用）
 │   ├── data/cars.json        # 63 款车型种子数据（含 20 款零百 5 秒内的性能车）
-│   └── static                # 前端页面：买家端 index.html、商家端 merchant.html
-└── src/test/java             # 58 个单元测试与集成测试（含多端互动流程测试）
+│   └── static                # 前端页面：买家端 index.html、商家端 merchant.html、管理端 admin.html
+└── src/test/java             # 66 个单元测试与集成测试（含多端互动流程测试）
 ```
 
 ## 九、Git 协作流程
@@ -349,8 +360,8 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
 
 | 老师要求 | 完成情况 | 证据 / 验证方式 |
 | --- | --- | --- |
-| （1）前后端 + 数据库 | ✅ Spring Boot 后端 + JPA/Hibernate 持久化，5 张业务表（`car` / `user_account` / `favorite` / `car_order` / `notification`）；默认 H2 文件库，部署切 MySQL | 商家端新增/改价/下架/删除车源，买家端列表实时变化；`docker compose exec mysql mysql -e "select ... from car"` 可查库 |
-| （2）多端系统项目 | ✅ 买家端 `/index.html` + 商家端 `/merchant.html` + 管理视角，共用后端与数据库 | 两个入口分别登录 `demo` 与 `dealer_byd` |
+| （1）前后端 + 数据库 | ✅ Spring Boot 后端 + JPA/Hibernate 持久化，7 张业务表（`car` / `user_account` / `favorite` / `car_order` / `notification` / `review` / `operation_log`）；默认 H2 文件库，部署切 MySQL | 商家端新增/改价/下架/删除车源或上传图片，买家端实时变化；`docker compose exec mysql mysql -e "select ... from car"` 可查库 |
+| （2）多端系统项目 | ✅ 买家端 `/index.html` + 商家端 `/merchant.html` + 管理端 `/admin.html`，共用后端与数据库 | 分别登录 `demo`、`dealer_byd` 与 `admin` 演示不同权限 |
 | （3）远程仓库要有代码提交记录 | ✅ 本项目为**一人一组独立完成**：main 分支包含数十次按功能拆分的提交、多次 `feature/*` 分支 `--no-ff` 合并，以及一次真实的 bug 回滚演练，全部由本人提交 | 仓库提交历史 / 提交日历 / `git shortlog -sne`；提交规范见 [docs/开发与提交指南.md](docs/开发与提交指南.md) |
 | （4）部署到服务器 | ✅ 提供 Dockerfile / docker-compose（MySQL+Nginx）/ systemd / 一键脚本与完整文档 | [docs/部署指南.md](docs/部署指南.md) |
 
@@ -387,6 +398,9 @@ powershell -ExecutionPolicy Bypass -File scripts/verify-sync.ps1
      照片目录已在 `.gitignore` 中忽略，**只保存在本地、不会提交到公开仓库**，
      版权归原图站所有，仅供本地个人学习演示使用；抓取时会生成 `photos-credits.json`
      记录每张照片的来源站点与原始链接。页面会自动优先使用照片，照片缺失或加载失败时回退到矢量示意图。
+  3. 商家通过商家端上传的实拍图保存在运行目录 `uploads/cars/`，数据库仅保存
+     `/uploads/cars/...` 地址。`uploads/` 不入 Git 仓库；Docker 部署已挂载持久化卷，
+     直接运行 jar 时应把 `dongchedi.upload.dir` 指向服务器上的持久化目录。
 - 本项目由一人独立完成，仓库全部提交的作者统一为 `abc459120244-cell <abc459120244@gmail.com>`。
   在其他机器上继续开发时，记得先配置成同一身份，提交才会统计到你的 GitHub 账号下：
 

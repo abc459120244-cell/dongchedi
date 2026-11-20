@@ -41,6 +41,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    volumes:
+      - app-uploads:/app/uploads
     networks: [dongchedi-net]
 
   nginx:
@@ -57,6 +59,7 @@ services:
 
 volumes:
   mysql-data:
+  app-uploads:
 
 networks:
   dongchedi-net:

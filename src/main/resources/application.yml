@@ -38,6 +38,10 @@ spring:
       static-locations: classpath:/static/
       cache:
         period: 0
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   mvc:
     problemdetails:
       enabled: false
@@ -49,6 +53,9 @@ dongchedi:
   recommend:
     default-limit: 5
     max-limit: 20
+  upload:
+    # 商家上传的车源图片保存目录（相对项目根目录）
+    dir: ./uploads
   auth:
     # 连续登录失败次数达到该值后按用户名临时锁定
     max-failed-attempts: 5
