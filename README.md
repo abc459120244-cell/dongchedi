@@ -42,7 +42,7 @@
 | 数据层 | Spring Data JPA + Hibernate，默认 H2 文件数据库（`./data/dongchedi.mv.db`），部署时切换 MySQL 8 |
 | 实时通信 | Server-Sent Events（SSE），买家与商家双向推送订单与消息 |
 | 前端 | 原生 HTML / CSS / JavaScript（无第三方依赖） |
-| 测试 | JUnit 5 + AssertJ + MockMvc（66 个测试用例，含图片上传、用户管理、权限与多端互动流程测试） |
+| 测试 | JUnit 5 + AssertJ + MockMvc（67 个测试用例，含图片上传、删除清理、用户管理、权限与多端互动流程测试） |
 
 ## 三、快速开始
 
@@ -131,7 +131,7 @@ java -jar target/dongchedi.jar --spring.profiles.active=mysql \
 | GET | `/api/notifications/stream` | **SSE 实时消息通道**（订单、状态变更实时推送） |
 | GET | `/api/merchant/summary` | 商家经营概览（需商家角色） |
 | GET / POST | `/api/merchant/cars` | 我的车源列表 / 新增车源 |
-| PUT / DELETE | `/api/merchant/cars/{id}` | 修改 / 删除车源 |
+| PUT / DELETE | `/api/merchant/cars/{id}` | 修改 / 删除车源；删除时同步清理收藏、评价与已上传图片 |
 | POST | `/api/merchant/cars/{id}/status` | 上架 / 下架车源 |
 | POST | `/api/merchant/cars/{id}/photo` | 上传 / 替换车源实拍图（multipart 字段名 `file`） |
 | DELETE | `/api/merchant/cars/{id}/photo` | 删除车源实拍图并回退到矢量示意图 |
@@ -291,7 +291,7 @@ dongchedi
 │   ├── application-mysql.yml # MySQL 配置（部署时使用）
 │   ├── data/cars.json        # 63 款车型种子数据（含 20 款零百 5 秒内的性能车）
 │   └── static                # 前端页面：买家端 index.html、商家端 merchant.html、管理端 admin.html
-└── src/test/java             # 66 个单元测试与集成测试（含多端互动流程测试）
+└── src/test/java             # 67 个单元测试与集成测试（含多端互动流程测试）
 ```
 
 ## 九、Git 协作流程

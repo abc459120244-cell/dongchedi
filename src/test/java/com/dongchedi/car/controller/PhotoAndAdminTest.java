@@ -1,6 +1,7 @@
 package com.dongchedi.car.controller;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.dongchedi.car.repository.jpa.ReviewJpaRepository;
 
 /**
  * 车源图片上传与管理端用户管理的集成测试。
@@ -39,6 +41,9 @@ class PhotoAndAdminTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private ReviewJpaRepository reviewJpa;
 
     private MockHttpSession login(String username, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
@@ -78,6 +83,45 @@ class PhotoAndAdminTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.photoUrl").doesNotExist());
         mockMvc.perform(get(photoUrl)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("删除车源时同步清理上传图片和关联评价")
+    void shouldDeletePhotoWhenCarIsDeleted() throws Exception {
+        MockHttpSession dealer = login("dealer_byd", "dealer123");
+        String createBody = """
+                {"name":"图片清理测试车型","brand":"比亚迪","level":"MID","bodyType":"SUV",
+                 "energyType":"BEV","price":19.88,"seats":5,"maxPowerKw":220,
+                 "zeroToHundredSeconds":5.8,"monthlySales":50,"userScore":4.3,
+                 "tags":["测试"],"scenes":["COMMUTE"],"highlight":"验证删除车源时清理图片",
+                 "status":"ON_SALE"}
+                """;
+        MvcResult created = mockMvc.perform(post("/api/merchant/cars").session(dealer)
+                        .contentType(MediaType.APPLICATION_JSON).content(createBody))
+                .andExpect(status().isOk())
+                .andReturn();
+        long carId = json(created).get("id").asLong();
+
+        MockMultipartFile file = new MockMultipartFile("file", "car.jpg", "image/jpeg",
+                "image-bytes".getBytes(StandardCharsets.UTF_8));
+        MvcResult uploaded = mockMvc.perform(multipart("/api/merchant/cars/" + carId + "/photo")
+                        .file(file).session(dealer))
+                .andExpect(status().isOk())
+                .andReturn();
+        String photoUrl = json(uploaded).get("photoUrl").asText();
+        mockMvc.perform(get(photoUrl)).andExpect(status().isOk());
+
+        MockHttpSession buyer = login("demo", "demo123");
+        mockMvc.perform(post("/api/reviews").session(buyer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"carId\":" + carId + ",\"rating\":5,\"content\":\"删除车源测试评价\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/merchant/cars/" + carId).session(dealer))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/cars/" + carId)).andExpect(status().isNotFound());
+        mockMvc.perform(get(photoUrl)).andExpect(status().isNotFound());
+        assertThat(reviewJpa.countByCarId(carId)).isZero();
     }
 
     @Test

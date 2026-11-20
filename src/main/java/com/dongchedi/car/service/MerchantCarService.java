@@ -6,6 +6,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.dongchedi.car.dto.CarFormRequest;
 import com.dongchedi.car.dto.MerchantCarView;
@@ -16,6 +18,7 @@ import com.dongchedi.car.model.UserAccount;
 import com.dongchedi.car.repository.jpa.CarJpaRepository;
 import com.dongchedi.car.repository.jpa.FavoriteJpaRepository;
 import com.dongchedi.car.repository.jpa.OrderJpaRepository;
+import com.dongchedi.car.repository.jpa.ReviewJpaRepository;
 
 /**
  * 商家端车源管理：新增、修改、上下架、删除。
@@ -34,17 +37,22 @@ public class MerchantCarService {
     private final CarJpaRepository carJpa;
     private final FavoriteJpaRepository favoriteJpa;
     private final OrderJpaRepository orderJpa;
+    private final ReviewJpaRepository reviewJpa;
     private final NotificationService notifications;
     private final AuditService auditService;
+    private final CarPhotoService carPhotoService;
 
     public MerchantCarService(CarJpaRepository carJpa, FavoriteJpaRepository favoriteJpa,
-                              OrderJpaRepository orderJpa, NotificationService notifications,
-                              AuditService auditService) {
+                              OrderJpaRepository orderJpa, ReviewJpaRepository reviewJpa,
+                              NotificationService notifications, AuditService auditService,
+                              CarPhotoService carPhotoService) {
         this.carJpa = carJpa;
         this.favoriteJpa = favoriteJpa;
         this.orderJpa = orderJpa;
+        this.reviewJpa = reviewJpa;
         this.notifications = notifications;
         this.auditService = auditService;
+        this.carPhotoService = carPhotoService;
     }
 
     public List<MerchantCarView> list(UserAccount user) {
@@ -101,9 +109,12 @@ public class MerchantCarService {
         CarEntity entity = requireOwned(user, id);
         String name = entity.getName();
         String brand = entity.getBrand();
+        String photoUrl = entity.getPhotoUrl();
         favoriteJpa.deleteByCarId(id);
+        reviewJpa.deleteByCarId(id);
         carJpa.delete(entity);
         auditService.record(user, "删除车源", "CAR", id, name + " / " + brand);
+        deletePhotoAfterCommit(photoUrl);
     }
 
     public MerchantSummary summary(UserAccount user) {
@@ -129,6 +140,25 @@ public class MerchantCarService {
             throw new BizException(HttpStatus.FORBIDDEN, "只能管理自己名下的车源");
         }
         return entity;
+    }
+
+    /**
+     * 数据库删除成功后再清理图片，避免事务回滚时图片已被误删。
+     */
+    private void deletePhotoAfterCommit(String photoUrl) {
+        if (photoUrl == null) {
+            return;
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    carPhotoService.deleteStoredPhoto(photoUrl);
+                }
+            });
+        } else {
+            carPhotoService.deleteStoredPhoto(photoUrl);
+        }
     }
 
     private void applyForm(CarEntity entity, CarFormRequest form) {

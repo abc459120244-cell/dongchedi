@@ -17,4 +17,6 @@ public interface ReviewJpaRepository extends JpaRepository<ReviewEntity, Long> {
     Optional<ReviewEntity> findByCarIdAndUserId(Long carId, Long userId);
 
     long countByCarId(Long carId);
+
+    long deleteByCarId(Long carId);
 }

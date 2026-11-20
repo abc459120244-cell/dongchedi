@@ -88,6 +88,13 @@ public class CarPhotoService {
         return MerchantCarView.from(saved);
     }
 
+    /**
+     * 删除车源时清理对应的磁盘文件。数据库事务由调用方负责，建议在提交成功后调用。
+     */
+    public void deleteStoredPhoto(String photoUrl) {
+        deleteOldFile(photoUrl);
+    }
+
     private CarEntity requireOwned(UserAccount user, Long carId) {
         CarEntity entity = carJpa.findById(carId)
                 .orElseThrow(() -> BizException.notFound("车源不存在：" + carId));
