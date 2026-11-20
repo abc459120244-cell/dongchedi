@@ -42,6 +42,14 @@ public class LoginRequiredInterceptor implements HandlerInterceptor {
         if (attribute instanceof Long userId) {
             Optional<UserAccount> user = userRepository.findById(userId);
             if (user.isPresent()) {
+                if (!user.get().enabled()) {
+                    if (session != null) {
+                        session.invalidate();
+                    }
+                    ErrorResponses.write(objectMapper, request, response, HttpStatus.UNAUTHORIZED,
+                            "账号已被禁用，请联系管理员");
+                    return false;
+                }
                 request.setAttribute(SessionKeys.CURRENT_USER_ATTRIBUTE, user.get());
                 return true;
             }

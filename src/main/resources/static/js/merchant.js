@@ -18,6 +18,7 @@
         handlingOrderId: null,
         orderFilter: '',
         orderKeyword: '',
+        photoFile: null,
         stream: null
     };
 
@@ -98,6 +99,9 @@
         dom.exportOrdersBtn = $('#exportOrdersBtn');
         dom.logTableBody = $('#logTableBody');
         dom.refreshLogsBtn = $('#refreshLogsBtn');
+        dom.carPhotoInput = $('#carPhotoInput');
+        dom.carPhotoPreview = $('#carPhotoPreview');
+        dom.removePhotoBtn = $('#removePhotoBtn');
         dom.carModal = $('#carModal');
         dom.carForm = $('#carForm');
         dom.carModalTitle = $('#carModalTitle');
@@ -189,6 +193,15 @@
             }
         });
         dom.carForm.addEventListener('submit', submitCarForm);
+        dom.carPhotoInput.addEventListener('change', function () {
+            var file = dom.carPhotoInput.files && dom.carPhotoInput.files[0];
+            state.photoFile = file || null;
+            if (file) {
+                dom.carPhotoPreview.src = URL.createObjectURL(file);
+                dom.carPhotoPreview.hidden = false;
+            }
+        });
+        dom.removePhotoBtn.addEventListener('click', removeCarPhoto);
 
         dom.orderFilter.addEventListener('click', function (event) {
             var button = event.target.closest('button[data-status]');
@@ -357,7 +370,8 @@
                     + '<td>' + car.id + '</td>'
                     + '<td><div class="rank-car">'
                     + '<span class="thumb thumb--sm" style="background:linear-gradient(135deg,#ff4d1f,#ff8a3d)">'
-                    + '<img src="/img/cars/photos/' + car.id + '.jpg" alt="" loading="lazy"'
+                    + '<img src="' + (car.photoUrl || ('/img/cars/photos/' + car.id + '.jpg'))
+                    + '" alt="" loading="lazy"'
                     + ' onerror="this.onerror=null;this.remove()"></span>'
                     + '<span>' + escapeHtml(car.name) + '</span></div></td>'
                     + '<td>' + escapeHtml(car.brand) + '</td>'
@@ -449,6 +463,16 @@
         $('#carStatus').value = car ? car.status : 'ON_SALE';
         $('#carTags').value = car && car.tags ? car.tags.join(',') : '';
         $('#carHighlight').value = car ? (car.highlight || '') : '';
+        state.photoFile = null;
+        dom.carPhotoInput.value = '';
+        if (car && car.photoUrl) {
+            dom.carPhotoPreview.src = car.photoUrl;
+            dom.carPhotoPreview.hidden = false;
+        } else {
+            dom.carPhotoPreview.src = '';
+            dom.carPhotoPreview.hidden = true;
+        }
+        dom.removePhotoBtn.hidden = !(car && car.photoUrl);
         dom.carError.hidden = true;
         dom.carModal.hidden = false;
         $('#carName').focus();
@@ -505,9 +529,28 @@
             })
             : postJson('/api/merchant/cars', payload);
 
-        request.then(function () {
+        request.then(function (saved) {
+            var carId = state.editingId || (saved && saved.id);
+            if (!state.photoFile || !carId) {
+                return null;
+            }
+            var formData = new FormData();
+            formData.append('file', state.photoFile);
+            return fetch('/api/merchant/cars/' + carId + '/photo', {method: 'POST', body: formData})
+                .then(function (response) {
+                    if (!response.ok) {
+                        return response.json().catch(function () {
+                            return {};
+                        }).then(function (body) {
+                            throw new Error(body.message || '图片上传失败');
+                        });
+                    }
+                    return response.json();
+                });
+        }).then(function () {
+            var wasEditing = state.editingId;
             closeCarForm();
-            toast(state.editingId ? '车源已更新，数据库已同步' : '车源已新增，买家端即可看到', 'success');
+            toast(wasEditing ? '车源已更新，数据库已同步' : '车源已新增，买家端即可看到', 'success');
             loadCars();
             loadSummary();
             loadLogs();
@@ -517,6 +560,26 @@
         }).finally(function () {
             dom.carSubmitBtn.disabled = false;
         });
+    }
+
+    function removeCarPhoto() {
+        if (!state.editingId) {
+            return;
+        }
+        if (!window.confirm('确定删除当前车源图片吗？删除后买家端会回退为示意图。')) {
+            return;
+        }
+        fetchJson('/api/merchant/cars/' + state.editingId + '/photo', {method: 'DELETE'})
+            .then(function () {
+                dom.carPhotoPreview.src = '';
+                dom.carPhotoPreview.hidden = true;
+                dom.removePhotoBtn.hidden = true;
+                toast('车源图片已删除', 'success');
+                loadCars();
+                loadLogs();
+            }).catch(function (error) {
+                toast(error.message);
+            });
     }
 
     function toggleStatus(id, nextStatus) {

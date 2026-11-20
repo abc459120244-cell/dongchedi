@@ -143,11 +143,18 @@ public class MerchantCarService {
         entity.setZeroToHundredSeconds(form.getZeroToHundredSeconds());
         entity.setMonthlySales(form.getMonthlySales());
         entity.setUserScore(form.getUserScore());
-        entity.setFuelConsumption(form.getFuelConsumption());
-        entity.setElectricRangeKm(form.getElectricRangeKm());
+        // 商家表单目前不包含油耗 / 纯电续航 / 用车场景，未提供时保留原值，避免编辑车源时丢数据
+        if (form.getFuelConsumption() != null) {
+            entity.setFuelConsumption(form.getFuelConsumption());
+        }
+        if (form.getElectricRangeKm() != null) {
+            entity.setElectricRangeKm(form.getElectricRangeKm());
+        }
         entity.setHighlight(form.getHighlight() == null ? "" : form.getHighlight().trim());
         entity.setTags(String.join(",", form.getTags()));
-        entity.setScenes(String.join(",", form.getScenes()));
+        if (form.getScenes() != null && !form.getScenes().isEmpty()) {
+            entity.setScenes(String.join(",", form.getScenes()));
+        }
         entity.setStatus(normalizeStatus(form.getStatus()));
     }
 

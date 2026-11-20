@@ -29,7 +29,9 @@ public record Car(
         double userScore,
         List<UseScene> scenes,
         List<String> tags,
-        String highlight) {
+        String highlight,
+        /** 商家上传的车源实拍图地址（为空时前端按车型 id 使用本地照片或矢量示意图） */
+        String photoUrl) {
 
     public String getLevelLabel() {
         return level == null ? null : level.label();

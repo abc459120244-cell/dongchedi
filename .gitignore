@@ -39,6 +39,9 @@ data/
 *.mv.db
 *.trace.db
 
+# ---- 运行时上传的车源图片 ----
+uploads/
+
 # ---- Env / Secret ----
 .env
 .env.*

@@ -42,6 +42,15 @@ public class UserEntity {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
+    /**
+     * 是否启用；管理员可以禁用账号。
+     *
+     * <p>使用可空 Boolean 是为了兼容「字段上线前就已存在的老数据」：
+     * H2/MySQL 在已有数据的表上新增 NOT NULL 列会失败，读取时把 null 视为启用。
+     */
+    @Column(name = "enabled")
+    private Boolean enabled = Boolean.TRUE;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -52,7 +61,8 @@ public class UserEntity {
         } catch (Exception ex) {
             userRole = UserRole.USER;
         }
-        return new UserAccount(id, username, nickname, userRole, passwordHash, createdAt);
+        return new UserAccount(id, username, nickname, userRole, passwordHash,
+                enabled == null || enabled, createdAt);
     }
 
     public static UserEntity fromModel(UserAccount account) {
@@ -61,6 +71,7 @@ public class UserEntity {
         entity.setNickname(account.nickname());
         entity.setRole(account.role().name());
         entity.setPasswordHash(account.passwordHash());
+        entity.setEnabled(account.enabled());
         return entity;
     }
 }

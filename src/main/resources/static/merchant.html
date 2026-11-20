@@ -19,6 +19,7 @@
         </a>
         <nav class="nav">
             <a href="/index.html">← 返回买家端</a>
+            <a href="/admin.html" id="adminEntry">管理后台</a>
         </nav>
         <div class="user-area" id="userArea"></div>
     </div>
@@ -205,6 +206,20 @@
                         <option value="ON_SALE">在售</option>
                         <option value="OFF_SHELF">已下架</option>
                     </select>
+                </div>
+                <div class="form-field form-field--full">
+                    <label class="form-label" for="carPhotoInput">车源实拍图（可选）</label>
+                    <div class="photo-upload">
+                        <img id="carPhotoPreview" alt="车源图片预览" hidden>
+                        <div class="photo-upload__body">
+                            <input type="file" id="carPhotoInput" accept="image/jpeg,image/png,image/webp">
+                            <p class="photo-upload__hint">
+                                支持 JPG / PNG / WebP，最大 5MB；新增车源保存后会自动上传，
+                                上传后买家端会优先展示这张图片。
+                            </p>
+                            <button type="button" class="link-btn" id="removePhotoBtn" hidden>删除当前图片</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-field form-field--full">
                     <label class="form-label" for="carTags">标签（英文逗号分隔）</label>

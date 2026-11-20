@@ -14,10 +14,11 @@ public record UserView(
         String displayName,
         String role,
         String roleLabel,
+        boolean enabled,
         LocalDateTime createdAt) {
 
     public static UserView from(UserAccount user) {
         return new UserView(user.id(), user.username(), user.nickname(), user.displayName(),
-                user.role().name(), user.role().label(), user.createdAt());
+                user.role().name(), user.role().label(), user.enabled(), user.createdAt());
     }
 }

@@ -24,6 +24,7 @@ public record MerchantCarView(
         double userScore,
         String highlight,
         List<String> tags,
+        String photoUrl,
         String status,
         String statusLabel,
         Long dealerId) {
@@ -35,7 +36,8 @@ public record MerchantCarView(
                 entity.getPrice(), entity.getSeats(), entity.getMaxPowerKw(),
                 entity.getZeroToHundredSeconds(), car.getAccelerationLabel(),
                 entity.getMonthlySales(), entity.getUserScore(), entity.getHighlight(),
-                car.tags(), entity.getStatus(), statusLabel(entity.getStatus()), entity.getDealerId());
+                car.tags(), entity.getPhotoUrl(), entity.getStatus(), statusLabel(entity.getStatus()),
+                entity.getDealerId());
     }
 
     public static String statusLabel(String status) {

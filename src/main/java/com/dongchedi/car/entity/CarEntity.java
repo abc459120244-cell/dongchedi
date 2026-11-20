@@ -103,6 +103,10 @@ public class CarEntity {
     @Column(length = 300)
     private String highlight;
 
+    /** 商家上传的实拍图地址 */
+    @Column(name = "photo_url", length = 300)
+    private String photoUrl;
+
     /** 所属商家（用户 id），为空表示平台自营 */
     @Column(name = "dealer_id")
     private Long dealerId;
@@ -134,7 +138,7 @@ public class CarEntity {
                 parse(EnergyType.class, energyType),
                 price, seats, lengthMm, widthMm, heightMm, wheelbaseMm, maxPowerKw,
                 zeroToHundredSeconds, fuelConsumption, electricRangeKm, monthlySales, userScore,
-                parseScenes(scenes), splitList(tags), highlight);
+                parseScenes(scenes), splitList(tags), highlight, photoUrl);
     }
 
     /**
@@ -168,6 +172,7 @@ public class CarEntity {
         this.tags = joinList(car.tags());
         this.scenes = joinEnums(car.scenes());
         this.highlight = car.highlight();
+        this.photoUrl = car.photoUrl();
     }
 
     private static <E extends Enum<E>> E parse(Class<E> type, String value) {

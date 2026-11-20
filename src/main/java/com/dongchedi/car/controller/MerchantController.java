@@ -2,6 +2,7 @@ package com.dongchedi.car.controller;
 
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,7 +12,9 @@ import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.dongchedi.car.dto.CarFormRequest;
 import com.dongchedi.car.dto.MerchantCarView;
@@ -20,6 +23,7 @@ import com.dongchedi.car.dto.OrderView;
 import com.dongchedi.car.dto.OperationLogView;
 import com.dongchedi.car.model.UserAccount;
 import com.dongchedi.car.service.AuditService;
+import com.dongchedi.car.service.CarPhotoService;
 import com.dongchedi.car.service.MerchantCarService;
 import com.dongchedi.car.service.OrderService;
 import com.dongchedi.car.support.SessionKeys;
@@ -36,12 +40,14 @@ public class MerchantController {
     private final MerchantCarService merchantCarService;
     private final OrderService orderService;
     private final AuditService auditService;
+    private final CarPhotoService carPhotoService;
 
     public MerchantController(MerchantCarService merchantCarService, OrderService orderService,
-                              AuditService auditService) {
+                              AuditService auditService, CarPhotoService carPhotoService) {
         this.merchantCarService = merchantCarService;
         this.orderService = orderService;
         this.auditService = auditService;
+        this.carPhotoService = carPhotoService;
     }
 
     @GetMapping("/summary")
@@ -82,6 +88,24 @@ public class MerchantController {
                                   @PathVariable Long id) {
         merchantCarService.delete(user, id);
         return merchantCarService.summary(user);
+    }
+
+    /**
+     * 上传车源实拍图（multipart/form-data，字段名 file，最大 5MB）。
+     */
+    @PostMapping(value = "/cars/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public MerchantCarView uploadPhoto(
+            @RequestAttribute(SessionKeys.CURRENT_USER_ATTRIBUTE) UserAccount user,
+            @PathVariable Long id,
+            @RequestPart("file") MultipartFile file) throws java.io.IOException {
+        return carPhotoService.upload(user, id, file);
+    }
+
+    @DeleteMapping("/cars/{id}/photo")
+    public MerchantCarView deletePhoto(
+            @RequestAttribute(SessionKeys.CURRENT_USER_ATTRIBUTE) UserAccount user,
+            @PathVariable Long id) {
+        return carPhotoService.remove(user, id);
     }
 
     /**

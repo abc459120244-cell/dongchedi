@@ -102,6 +102,9 @@ public class AuthService {
 
         failures.remove(key);
         UserAccount user = found.get();
+        if (!user.enabled()) {
+            throw new BizException(HttpStatus.UNAUTHORIZED, "账号已被禁用，请联系管理员");
+        }
         bindSession(request, user);
         log.info("用户登录成功: {}", user.username());
         return user;

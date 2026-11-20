@@ -13,11 +13,12 @@ public record AdminUserView(
         String nickname,
         String role,
         String roleLabel,
+        boolean enabled,
         LocalDateTime createdAt,
         int favoriteCount) {
 
     public static AdminUserView from(UserAccount user, int favoriteCount) {
         return new AdminUserView(user.id(), user.username(), user.nickname(), user.role().name(),
-                user.role().label(), user.createdAt(), favoriteCount);
+                user.role().label(), user.enabled(), user.createdAt(), favoriteCount);
     }
 }

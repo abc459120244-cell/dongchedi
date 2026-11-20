@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>车帝选车 · 管理后台</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar__inner">
+        <a class="brand" href="/admin.html">
+            <span class="brand__logo">管</span>
+            <span class="brand__text">
+                <strong>管理后台</strong>
+                <small>车帝选车 · 用户与权限管理</small>
+            </span>
+        </a>
+        <nav class="nav">
+            <a href="/merchant.html">商家工作台</a>
+            <a href="/index.html">买家端</a>
+        </nav>
+        <div class="user-area" id="userArea"></div>
+    </div>
+</header>
+
+<main>
+    <section class="section" id="loginSection" hidden>
+        <div class="panel panel--login">
+            <h2 class="panel__title">管理员登录</h2>
+            <p class="section__note">只有管理员账号可以进入管理后台，执行启用 / 禁用账号、调整角色等操作。</p>
+            <form id="loginForm" class="auth-form">
+                <label class="form-label" for="loginUsername">账号</label>
+                <input class="text-input" id="loginUsername" placeholder="管理员账号">
+                <label class="form-label" for="loginPassword">密码</label>
+                <input class="text-input" id="loginPassword" type="password" placeholder="密码">
+                <p class="auth-error" id="loginError" hidden></p>
+                <div class="form-actions">
+                    <button class="btn btn--primary" type="submit" id="loginBtn">登录</button>
+                </div>
+            </form>
+            <p class="auth-demo">演示管理员账号：<code>admin / admin123</code></p>
+        </div>
+    </section>
+
+    <section class="section" id="workbench" hidden>
+        <div class="section__head">
+            <h2>用户与权限</h2>
+            <p>所有数据来自数据库表 <code>user_account</code>；禁用后该账号立即无法登录，已登录的会话也会失效。</p>
+        </div>
+        <div class="stat-cards" id="statCards"></div>
+
+        <div class="section__head section__head--row">
+            <div>
+                <h2>用户列表</h2>
+                <p>可以搜索账号 / 昵称，调整角色或启用 / 禁用账号。</p>
+            </div>
+            <div class="merchant-toolbar__left">
+                <input class="text-input text-input--inline" id="userKeyword" placeholder="搜索账号或昵称">
+                <button class="btn btn--ghost btn--small" type="button" id="refreshUsersBtn">刷新</button>
+            </div>
+        </div>
+        <div class="panel">
+            <table class="table table--wide">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>账号</th>
+                    <th>昵称</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th>收藏</th>
+                    <th>注册时间</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="userTableBody"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+<script src="/js/admin.js"></script>
+</body>
+</html>

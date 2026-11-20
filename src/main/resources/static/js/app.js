@@ -135,14 +135,22 @@
 
     /** 车身形式对应的矢量示意图路径（与后端 BodyType 枚举名小写一致） */
     function carPhoto(car) {
+        if (car && car.photoUrl) {
+            return car.photoUrl;
+        }
         return '/img/cars/' + String(car.bodyType || 'SEDAN').toLowerCase() + '.svg';
+    }
+
+    /** 实拍图地址：优先商家上传的图片，其次按车型 id 使用本地抓取的照片 */
+    function carPhotoSrc(car) {
+        return (car && car.photoUrl) || ('/img/cars/photos/' + car.id + '.jpg');
     }
 
     /** 品牌渐变底 + 车身示意图的小缩略图 */
     function carThumb(car, extraClass) {
         return '<span class="thumb' + (extraClass ? ' ' + extraClass : '')
             + '" style="background:' + brandGradient(car.brand) + '">'
-            + '<img src="/img/cars/photos/' + car.id + '.jpg" alt="'
+            + '<img src="' + carPhotoSrc(car) + '" alt="'
             + escapeHtml(car.bodyTypeLabel || '车型') + '" loading="lazy"'
             + ' onerror="this.onerror=null;this.src=\'' + carPhoto(car) + '\'"></span>';
     }
@@ -704,7 +712,7 @@
         return '<article class="car-card">'
             + '<div class="car-card__cover car-card__cover--link" data-action="detail" data-id="' + car.id
             + '" style="background:' + brandGradient(car.brand) + '">'
-            + '<img class="car-card__bg" src="/img/cars/photos/' + car.id + '.jpg" alt="" loading="lazy"'
+            + '<img class="car-card__bg" src="' + carPhotoSrc(car) + '" alt="" loading="lazy"'
             + ' onload="this.parentNode.classList.add(\'has-photo\')" onerror="this.remove()">'
             + '<div class="car-card__badges">' + badges + '</div>'
             + '<img class="car-card__art" src="' + carPhoto(car) + '" alt="'
@@ -1059,7 +1067,7 @@
 
         dom.carDetailContent.innerHTML = ''
             + '<div class="detail-hero">'
-            + '<div class="detail-cover"><img src="/img/cars/photos/' + car.id + '.jpg" alt="" loading="lazy"'
+            + '<div class="detail-cover"><img src="' + carPhotoSrc(car) + '" alt="" loading="lazy"'
             + ' onerror="this.onerror=null;this.src=\'/img/cars/' + String(car.bodyType || 'SEDAN').toLowerCase() + '.svg\'"></div>'
             + '<div class="detail-info">'
             + '<div class="detail-kicker">' + escapeHtml(car.brand) + ' · ' + escapeHtml(car.bodyTypeLabel)

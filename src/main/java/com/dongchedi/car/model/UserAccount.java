@@ -14,6 +14,7 @@ public record UserAccount(
         String nickname,
         UserRole role,
         String passwordHash,
+        boolean enabled,
         LocalDateTime createdAt) {
 
     public boolean isAdmin() {
