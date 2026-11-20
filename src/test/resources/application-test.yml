@@ -12,3 +12,7 @@ spring:
   h2:
     console:
       enabled: false
+
+dongchedi:
+  upload:
+    dir: ./target/test-uploads
