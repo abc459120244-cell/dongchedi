@@ -23,10 +23,12 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.dongchedi.car.repository.jpa.ReviewJpaRepository;
+import com.dongchedi.car.service.RealtimeNotifier;
 
 /**
  * 车源图片上传与管理端用户管理的集成测试。
@@ -44,6 +46,9 @@ class PhotoAndAdminTest {
 
     @Autowired
     private ReviewJpaRepository reviewJpa;
+
+    @Autowired
+    private RealtimeNotifier realtimeNotifier;
 
     private MockHttpSession login(String username, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
@@ -171,6 +176,8 @@ class PhotoAndAdminTest {
                 .andReturn();
         long userId = json(registered).get("id").asLong();
         MockHttpSession userSession = (MockHttpSession) registered.getRequest().getSession(false);
+        SseEmitter emitter = realtimeNotifier.subscribe(userId);
+        assertThat(realtimeNotifier.connectionCount(userId)).isEqualTo(1);
 
         // 普通用户不能访问商家端
         mockMvc.perform(get("/api/merchant/summary").session(userSession))
@@ -188,6 +195,7 @@ class PhotoAndAdminTest {
         mockMvc.perform(post("/api/admin/users/" + userId + "/enabled").session(admin).param("enabled", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.enabled").value(false));
+        assertThat(realtimeNotifier.connectionCount(userId)).isZero();
         mockMvc.perform(get("/api/merchant/summary").session(userSession))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/auth/login")
@@ -204,6 +212,7 @@ class PhotoAndAdminTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"" + username + "\",\"password\":\"pass12345\"}"))
                 .andExpect(status().isOk());
+        emitter.complete();
     }
 
     @Test

@@ -725,6 +725,15 @@
         stream.addEventListener('notification', function () {
             loadSummary();
         });
+        stream.addEventListener('account-disabled', function (event) {
+            // 主动关闭，避免 EventSource 在服务端结束连接后继续重连
+            stream.close();
+            if (state.stream === stream) {
+                state.stream = null;
+            }
+            showLogin(event.data || '账号已被禁用，请联系管理员');
+            toast(event.data || '账号已被禁用，请联系管理员');
+        });
         stream.onerror = function () {
             /* 断线后浏览器会自动重连 */
         };

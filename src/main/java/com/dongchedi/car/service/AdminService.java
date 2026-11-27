@@ -5,6 +5,8 @@ import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.dongchedi.car.dto.AdminUserView;
 import com.dongchedi.car.entity.UserEntity;
@@ -22,12 +24,14 @@ public class AdminService {
     private final UserJpaRepository userJpa;
     private final FavoriteService favoriteService;
     private final AuditService auditService;
+    private final RealtimeNotifier realtimeNotifier;
 
     public AdminService(UserJpaRepository userJpa, FavoriteService favoriteService,
-                        AuditService auditService) {
+                        AuditService auditService, RealtimeNotifier realtimeNotifier) {
         this.userJpa = userJpa;
         this.favoriteService = favoriteService;
         this.auditService = auditService;
+        this.realtimeNotifier = realtimeNotifier;
     }
 
     public List<AdminUserView> users() {
@@ -41,6 +45,9 @@ public class AdminService {
         userJpa.save(target);
         auditService.record(operator, enabled ? "启用账号" : "禁用账号", "USER", targetId,
                 target.getUsername() + " → " + (enabled ? "启用" : "禁用"));
+        if (!enabled) {
+            disconnectAfterCommit(targetId);
+        }
         return view(target);
     }
 
@@ -67,6 +74,19 @@ public class AdminService {
         }
         return userJpa.findById(targetId)
                 .orElseThrow(() -> BizException.notFound("用户不存在：" + targetId));
+    }
+
+    private void disconnectAfterCommit(Long userId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    realtimeNotifier.disconnect(userId, "账号已被禁用，请联系管理员");
+                }
+            });
+        } else {
+            realtimeNotifier.disconnect(userId, "账号已被禁用，请联系管理员");
+        }
     }
 
     private AdminUserView view(UserEntity entity) {

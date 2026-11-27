@@ -59,6 +59,30 @@ public class RealtimeNotifier {
         }
     }
 
+    /**
+     * 账号被禁用时通知所有端并主动结束连接，避免已打开的 SSE 继续接收消息。
+     */
+    public void disconnect(Long userId, String reason) {
+        if (userId == null) {
+            return;
+        }
+        List<SseEmitter> list = emitters.remove(userId);
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        for (SseEmitter emitter : list) {
+            try {
+                emitter.send(SseEmitter.event().name("account-disabled")
+                        .data(reason == null || reason.isBlank() ? "账号已被禁用，请联系管理员" : reason));
+            } catch (Exception ignored) {
+                /* 连接可能已经断开，下面统一结束即可 */
+            } finally {
+                emitter.complete();
+            }
+        }
+        log.info("用户 {} 的 {} 个实时连接已断开", userId, list.size());
+    }
+
     private void remove(Long userId, SseEmitter emitter) {
         List<SseEmitter> list = emitters.get(userId);
         if (list != null) {

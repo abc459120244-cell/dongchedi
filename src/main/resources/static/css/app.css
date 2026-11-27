@@ -1508,6 +1508,16 @@ select:focus {
     white-space: nowrap;
 }
 
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll .table {
+    min-width: 760px;
+}
+
 .table-actions {
     display: flex;
     gap: 6px;

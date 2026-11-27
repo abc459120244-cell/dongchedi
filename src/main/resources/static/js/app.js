@@ -1285,6 +1285,22 @@
         stream.addEventListener('notification', function () {
             loadUnread();
         });
+        stream.addEventListener('account-disabled', function (event) {
+            // 服务端已主动结束连接；先关闭 EventSource，避免浏览器再次自动重连
+            stream.close();
+            if (state.stream === stream) {
+                state.stream = null;
+            }
+            state.user = null;
+            state.unread = 0;
+            state.favorites = new Set(loadFavorites());
+            applyFavoritesChange();
+            renderCars(state.lastPage);
+            if (!dom.myOrderModal.hidden) {
+                dom.myOrderModal.hidden = true;
+            }
+            toast(event.data || '账号已被禁用，请联系管理员');
+        });
         stream.onerror = function () {
             /* 断线后浏览器会自动重连 */
         };
